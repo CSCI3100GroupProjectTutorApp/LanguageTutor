@@ -11,4 +11,4 @@ Sample:
 
 
 
-For more details and other functions, please read the content of mongodb_utils where each files refer to one collection in the database
+For more details and other functions, please read the content of mongodb_utils where each file refer to one collection in the database
