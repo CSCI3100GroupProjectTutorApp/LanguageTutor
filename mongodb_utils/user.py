@@ -1,5 +1,12 @@
 # mongodb_utils/user.py
 
+"""
+Attributes in collection 'user':
+    userid: ID of the user
+    username: Username of the user
+    password: Password of the user
+"""
+
 def add_user(client, username, password) -> int:
     """
     Add a new user to the user collection

@@ -2,6 +2,16 @@
 import datetime
 import time
 
+"""
+Attributes in collection 'word':
+    wordid: ID of the word
+    word: Exact word
+    ch_meaning: Chinese meaning/translation
+    en_meaning: English meaning/definition
+    part_of_speech: List of parts of speech (e.g., ["noun", "verb"])
+    wordtime: Timestamp of when the word was added
+"""
+
 def add_word(client, word, en_meaning, ch_meaning, part_of_speech) -> int:
     """
     Add a new word to the word collection
