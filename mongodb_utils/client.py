@@ -5,8 +5,8 @@ from pymongo.server_api import ServerApi
 class MongoDBClient:
     """Main client class for MongoDB connections"""
     
-    def __init__(self):
-        self.uri = "mongodb+srv://CSCI3100:NklOk7GZqV3M2tGi@csci3100-project.tloff.mongodb.net/?retryWrites=true&w=majority&appName=CSCI3100-Project"
+    def __init__(self, username:str, password:str):
+        self.uri = f"mongodb+srv://{username}:{password}@csci3100-project.tloff.mongodb.net/?retryWrites=true&w=majority&appName=CSCI3100-Project"
         self.db_name = "languageTutor"
         self.client = None
         self.db = None
@@ -50,7 +50,7 @@ class MongoDBClient:
         self.connect()
         return self
     
-    def __exit__(self, exc_type, exc_val, exc_tb):
+    def __exit__(self):
         """Ensure connection is closed when exiting context"""
         self.close()
         return
