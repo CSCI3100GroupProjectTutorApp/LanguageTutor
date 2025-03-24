@@ -7,7 +7,8 @@ Usage: include "import mongodb_utils as mdb" in the .py file
 
 Sample: 
 
-![image](https://github.com/user-attachments/assets/80de5741-6d1e-4ff5-b67d-e5f461712d65)
+![image](https://github.com/user-attachments/assets/b825a416-732c-4903-bd79-4006d9ff940f)
+
 
 
 
