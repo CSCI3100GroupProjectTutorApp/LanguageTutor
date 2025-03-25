@@ -1,5 +1,5 @@
 import { StyleSheet, Text, View, Dimensions,Image, TextInput, TouchableOpacity, ActivityIndicator, 
-        KeyboardAvoidingView, Platform,ScrollView } from 'react-native'
+        KeyboardAvoidingView, Platform,ScrollView, Alert } from 'react-native'
 import React, {useState} from 'react'
 import { Link, useRouter } from 'expo-router'
 import {AntDesign,Ionicons} from '@expo/vector-icons'
@@ -9,11 +9,47 @@ const Login = () => {
     const [password, setPassword] = useState("");
     const [showPassword, setShowPassword] = useState(false);
     const [isLoading, setIsLoading] = useState(false); 
+    const [error, setError] = useState("");
     const router = useRouter();
     
-    const handleLogin = () => {
-      router.push('../(tabs)')
+    const handleLogin = async () => {
+      // Validate inputs
+      if (!username || !password) {
+        setError("Please enter both username and password");
+        return;
+      }
+      
+      setIsLoading(true);
+      setError("");
+      
+      try {
+        // Call the login API
+        const response = await fetch('http://127.0.0.1:8000/login', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
+          body: `username=${encodeURIComponent(username)}&password=${encodeURIComponent(password)}`,
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          console.log("Login successful:", data);
+          
+          // Store the token (in a real app, you'd save this to secure storage)
+          // For now, just navigate to the main app
+          router.push('../(tabs)');
+        } else {
+          setError("Invalid username or password");
+        }
+      } catch (err) {
+        console.error("Login error:", err);
+        setError("Connection error. Please try again.");
+      } finally {
+        setIsLoading(false);
+      }
     }
+    
   return (
     <KeyboardAvoidingView style={{flex:1}} behavior={Platform.OS === 'ios' ? "padding" : "height"}>
     <View style={styles.container}>
@@ -74,6 +110,10 @@ const Login = () => {
                 </TouchableOpacity>
             </View>
         </View>
+        
+        {/* Display error message */}
+        {error ? <Text style={styles.errorText}>{error}</Text> : null}
+        
         <TouchableOpacity style={styles.button} onPress={handleLogin} disabled={isLoading}>
             {isLoading ? (
                 <ActivityIndicator color ="white"/>
@@ -186,7 +226,14 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: "700",
   },
-  
+  errorText: {
+    color: 'red',
+    backgroundColor: 'rgba(255,255,255,0.7)',
+    padding: 10,
+    borderRadius: 5,
+    marginBottom: 15,
+    textAlign: 'center',
+  },
   link: {
     color: "#2e5a2e",
     fontWeight: "600",

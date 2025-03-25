@@ -6,7 +6,7 @@ from typing import Optional
 
 from ..models.user_model import UserInDB
 from .jwt_handler import verify_token
-from ..database.mongodb import get_db
+from ..database.mongodb_connection import get_db
 
 # For password hashing
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -23,7 +23,7 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
 async def get_user(username: str):
     """Get a user by username"""
     try:
-        db = get_db()
+        db = await get_db()
         user_doc = await db.users.find_one({"username": username})
         if user_doc:
             # Explicitly convert MongoDB's _id to user_id string
@@ -40,7 +40,7 @@ async def get_user(username: str):
 
 async def authenticate_user(username: str, password: str):
     """Authenticate a user"""
-    db = get_db()
+    db = await get_db()
     user_doc = await db.users.find_one({"username": username})
     
     if not user_doc:

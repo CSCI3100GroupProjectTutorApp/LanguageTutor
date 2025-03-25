@@ -9,8 +9,9 @@ from ..models.user_model import UserCreate, UserResponse, Token, RefreshToken
 from ..auth.auth_handler import get_password_hash, authenticate_user, get_current_user
 from ..auth.jwt_handler import create_access_token, create_refresh_token, verify_token
 from ..auth.token_blacklist import add_to_blacklist
-from ..database.mongodb import get_db
+from ..database.mongodb_connection import get_db
 from ..config import settings
+from ..utils.timezone_utils import get_hk_time, convert_to_hk_time, HK_TIMEZONE
 
 router = APIRouter(tags=["Authentication"])
 
@@ -29,7 +30,7 @@ async def register_user(user_data: UserCreate):
     """
     try:
         # Get database instance
-        db = get_db()
+        db = await get_db()
         
         # Check if username or email already exists
         existing_user = await db.users.find_one({
@@ -59,7 +60,7 @@ async def register_user(user_data: UserCreate):
             "email": user_data.email,
             "hashed_password": hashed_password,
             "is_active": True,
-            "created_at": datetime.now(timezone.utc),
+            "created_at": get_hk_time(),
             "last_login": None
         }
         
@@ -90,7 +91,7 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends()):
     Raises:
       - 401: Invalid credentials
     """
-    db = get_db()
+    db = await get_db()
     user = await authenticate_user(form_data.username, form_data.password)
     
     if not user:
@@ -103,7 +104,7 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends()):
     # Update last login time
     await db.users.update_one(
         {"username": user.username},
-        {"$set": {"last_login": datetime.now(timezone.utc)}}
+        {"$set": {"last_login": get_hk_time()}}
     )
     
     # Create access token
@@ -155,7 +156,7 @@ async def logout(request: Request, current_user = Depends(get_current_user)):
         add_to_blacklist(jti, exp)
         
         # Clear the refresh token from the database
-        db = get_db()
+        db = await get_db()
         await db.users.update_one(
             {"username": current_user.username},
             {"$unset": {"refresh_token": ""}}
@@ -196,7 +197,7 @@ async def refresh_token(refresh_token_data: RefreshToken):
         username = token_data["user_id"]
         
         # Get the user
-        db = get_db()
+        db = await get_db()
         user_doc = await db.users.find_one({"username": username})
         
         if not user_doc:

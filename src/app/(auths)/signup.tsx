@@ -1,18 +1,74 @@
 import { StyleSheet, Text, View, Dimensions,Image, TextInput, TouchableOpacity, ActivityIndicator, 
-  KeyboardAvoidingView, Platform } from 'react-native'
+  KeyboardAvoidingView, Platform, Alert } from 'react-native'
 import React, {useState} from 'react'
-import { Link } from 'expo-router'
+import { Link, router } from 'expo-router'
 import {AntDesign,Ionicons} from '@expo/vector-icons'
 
 const Login = () => {
 const [username, setUsername] = useState("");
+const [email, setEmail] = useState("");
 const [password, setPassword] = useState("");
 const [showPassword, setShowPassword] = useState(false);
 const [authPassword, setAuthPassword] = useState("");
 const [showAuthPassword, setShowAuthPassword] = useState(false);
 const [isLoading, setIsLoading] = useState(false); 
+const [error, setError] = useState("");
 
-const handleSignup = () => {}
+const handleSignup = async () => {
+  // Reset error message
+  setError("");
+  
+  // Validate inputs
+  if (!username || !password || !authPassword) {
+    setError("Please fill all fields");
+    return;
+  }
+  
+  if (password !== authPassword) {
+    setError("Passwords do not match");
+    return;
+  }
+  
+  setIsLoading(true);
+  
+  try {
+    // Call the registration API
+    const response = await fetch('http://127.0.0.1:8000/register', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        username,
+        email: email || `${username}@example.com`, // Use provided email or generate one
+        password,
+      }),
+    });
+    
+    if (response.ok) {
+      // Registration successful
+      Alert.alert(
+        "Success",
+        "Account created successfully!",
+        [
+          { 
+            text: "OK", 
+            onPress: () => router.replace('/(auths)') 
+          }
+        ]
+      );
+    } else {
+      const errorData = await response.json();
+      setError(errorData.detail || "Registration failed");
+    }
+  } catch (err) {
+    setError("Connection error. Please try again.");
+    console.error(err);
+  } finally {
+    setIsLoading(false);
+  }
+}
+
 return (
 <KeyboardAvoidingView style={{flex:1}} behavior={Platform.OS === 'ios' ? "padding" : "height"}>
 <View style={styles.container}>
@@ -40,6 +96,27 @@ return (
           />
       </View>
   </View>
+  
+  <View style={styles.inputGroup}>
+      <View style={styles.inputContainer}>
+          <AntDesign
+              name="mail"
+              size={20}
+              color='gray'
+              style={styles.inputIcon}
+          />
+          <TextInput
+              style={styles.input}
+              placeholder='Enter your Email'
+              placeholderTextColor={"#808080"}
+              value={email}
+              onChangeText={setEmail}
+              autoCapitalize='none'
+              keyboardType="email-address"
+          />
+      </View>
+  </View>
+  
   <View style={styles.inputGroup}>
       <View style={styles.inputContainer}>
           <AntDesign
@@ -98,6 +175,9 @@ return (
           </TouchableOpacity>
       </View>
   </View>
+  
+  {error ? <Text style={styles.errorText}>{error}</Text> : null}
+  
   <TouchableOpacity style={styles.button} onPress={handleSignup} disabled={isLoading}>
       {isLoading ? (
           <ActivityIndicator color ="white"/>
@@ -189,7 +269,14 @@ color: 'white',
 fontSize: 20,
 fontWeight: "700",
 },
-
+errorText: {
+  color: 'red',
+  backgroundColor: 'rgba(255,255,255,0.7)',
+  padding: at = 10,
+  borderRadius: 5,
+  marginBottom: 15,
+  textAlign: 'center',
+},
 link: {
 color: "#2e5a2e",
 fontWeight: "600",

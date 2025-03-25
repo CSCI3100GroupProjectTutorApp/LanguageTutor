@@ -3,6 +3,7 @@ from typing import Optional
 from datetime import datetime
 from datetime import timezone
 from bson import ObjectId
+from ..utils.timezone_utils import get_hk_time, HK_TIMEZONE
 
 class UserBase(BaseModel):
     username: str
@@ -22,7 +23,7 @@ class UserInDB(UserBase):
     user_id: Optional[str] = None
     hashed_password: str
     is_active: bool = True
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    created_at: datetime = Field(default_factory=get_hk_time)
     last_login: Optional[datetime] = None
     
     class Config:

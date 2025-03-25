@@ -3,11 +3,18 @@ from fastapi import FastAPI, Depends, HTTPException, status, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from jose import jwt
+import logging
 
-from .database.mongodb import connect_to_mongodb, close_mongodb_connection, get_db
-from .routes import auth_routes, user_routes
+# Use the new mongodb connection module
+from .database.mongodb_connection import connect_to_mongodb, close_mongodb_connection, get_db
+from .database.init_db import init_db
+from .routes import auth_routes, user_routes, utility_routes
 from .config import settings
 from .auth.token_blacklist import is_blacklisted
+
+# Set up logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 app = FastAPI(
     title="Language Tutoring API",
@@ -27,7 +34,19 @@ app.add_middleware(
 # Database events
 @app.on_event("startup")
 async def startup_db_client():
-    await connect_to_mongodb()
+    try:
+        logger.info("Starting database connection...")
+        await connect_to_mongodb()
+        
+        # Initialize database (create collections and indices)
+        logger.info("Initializing database...")
+        await init_db()
+        
+        logger.info("Database setup complete!")
+    except Exception as e:
+        logger.error(f"Database initialization error: {e}")
+        # Don't crash the application, but log the error
+        # The error will be handled when endpoints try to access the database
 
 @app.on_event("shutdown")
 async def shutdown_db_client():
@@ -36,6 +55,7 @@ async def shutdown_db_client():
 # Include routers
 app.include_router(auth_routes.router)
 app.include_router(user_routes.router)
+app.include_router(utility_routes.router, prefix="/utils")
 
 @app.get("/")
 async def root():
@@ -46,7 +66,7 @@ async def test_db():
     """Test database connectivity"""
     try:
         # Use the get_db function to retrieve the database
-        db = get_db()
+        db = await get_db()
         
         # Test connection
         await db.command("ping")
@@ -56,7 +76,7 @@ async def test_db():
         
         return {
             "status": "Connected to MongoDB Atlas",
-            "database": "language_tutoring_app",
+            "database": "languageTutor",
             "collections": collections
         }
     except Exception as e:

@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from ..models.user_model import UserResponse
 from ..auth.auth_handler import get_current_user
-from ..database.mongodb import get_db
+from ..database.mongodb_connection import get_db
 router = APIRouter(prefix="/users", tags=["User Management"])
 
 @router.get("/me", response_model=UserResponse)
@@ -26,7 +26,7 @@ async def get_user_profile(current_user = Depends(get_current_user)):
         
         # If still no ID, try to get the MongoDB document directly
         if not user_id:
-            db = get_db()
+            db = await get_db()
             user_doc = await db.users.find_one({"username": current_user.username})
             if user_doc and '_id' in user_doc:
                 user_id = str(user_doc['_id'])
