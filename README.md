@@ -1,7 +1,7 @@
 # Language Tutoring API
 
 This branch is used for testing the authorization function e.g. register, login. I didn't merge it cause the ai change front end code 
-and I am afraid it affects the design
+and I am afraid that it affects the design.
 
 ## Features
 

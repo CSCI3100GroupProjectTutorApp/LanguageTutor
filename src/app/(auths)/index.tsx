@@ -173,14 +173,18 @@ const styles = StyleSheet.create({
     backgroundColor: "#703682",
     padding: 20,
     justifyContent: "center",
+    maxWidth: Platform.OS === 'web' ? 480 : '100%',
+    alignSelf: Platform.OS === 'web' ? 'center' : 'stretch',
+    minHeight: Platform.OS === 'web' ? '100%' : 'auto',
   },
   topIllustration: {
     alignItems: "center",
     width: "100%",
   },
   illustrationImage: {
-    width: width * 0.75,
-    height: width * 0.75,
+    width: Platform.OS === 'web' ? 200 : width * 0.75,
+    height: Platform.OS === 'web' ? 200 : width * 0.75,
+    maxWidth: '100%',
   },
   title: {
     fontSize: 32,
