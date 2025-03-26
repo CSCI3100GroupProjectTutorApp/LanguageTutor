@@ -69,10 +69,10 @@ class MongoDBClient:
             self.connect()
         return self.db[collection_name]
     
-    def get_async_collection(self, collection_name):
+    async def get_async_collection(self, collection_name):
         """Get a collection from the database (asynchronous)"""
         if self.async_db is None:
-            asyncio.create_task(self.connect_async())
+            await self.connect_async()
         return self.async_db[collection_name]
     
     def print_collection(self, collection_name):
@@ -101,7 +101,7 @@ class MongoDBClient:
         return self
     
     def __exit__(self, exc_type, exc_val, exc_tb):
-        """Ensure connection is closed when exiting context (synchronous)"""
+        """Ensure connection is closed when exiting context"""
         self.close()
         return
         

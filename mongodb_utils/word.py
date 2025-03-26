@@ -3,7 +3,7 @@ import datetime
 import time
 
 """
-Attributes in collection 'word':
+Attributes in collection 'words':
     wordid: ID of the word
     word: Exact word
     ch_meaning: Chinese meaning/translation
@@ -12,7 +12,7 @@ Attributes in collection 'word':
     wordtime: Timestamp of when the word was added
 """
 
-def add_word(client, word, en_meaning, ch_meaning, part_of_speech) -> int:
+async def add_word(client, word, en_meaning, ch_meaning, part_of_speech) -> int:
     """
     Add a new word to the word collection
     
@@ -26,26 +26,28 @@ def add_word(client, word, en_meaning, ch_meaning, part_of_speech) -> int:
     Returns:
         wordid: The ID of the newly created word
     """
-    if client.db is None:
-        client.connect()
+    # Ensure client is connected asynchronously
+    if client.async_db is None:
+        await client.connect_async()
         
-    collection = client.db['word']
+    collection = client.async_db['words']
+    
     try:
         # Check if word already exists
-        existing_word = collection.find_one({"word": word})
+        existing_word = await collection.find_one({"word": word})
         if existing_word:
             print(f"Word '{word}' already exists with ID {existing_word['wordid']}")
             return existing_word["wordid"]
             
         # Find the maximum word ID
-        max_word = collection.find_one({}, sort=[("wordid", -1)])
-        if max_word:
+        max_word = await collection.find_one({}, sort=[("wordid", -1)])
+        if max_word and "wordid" in max_word:
             wordid = max_word["wordid"] + 1
         else:
             wordid = 1  # Start with ID 1 if collection is empty
 
         # Get current timestamp
-        ts = time.time()
+        current_time = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         
         # Add a new word to the collection
         document = {
@@ -54,47 +56,93 @@ def add_word(client, word, en_meaning, ch_meaning, part_of_speech) -> int:
             "ch_meaning": ch_meaning, 
             "en_meaning": en_meaning,
             "part_of_speech": part_of_speech, 
-            "wordtime": datetime.datetime.fromtimestamp(ts).strftime('%Y-%m-%d %H:%M')
+            "wordtime": current_time
         }
         
-        result = collection.insert_one(document)
+        result = await collection.insert_one(document)
         print(f"Word added. Inserted document ID: {result.inserted_id}")
         return wordid
     except Exception as e:
         print(f"Error adding word:", e)
+        raise e
 
-def find_word(client, word=None, wordid=None):
+async def find_word(client, word=None, wordid=None, partial_match=False):
     """
-    Find word(s) by exact match or ID
+    Find word(s) by exact match, partial match, or ID
     
     Args:
         client: MongoDBClient instance
-        word: (Optional) Exact word to search for
+        word: (Optional) Word to search for
         wordid: (Optional) Word ID to search for
+        partial_match: Whether to use partial matching for the word
         
     Returns:
-        A word document, or None if not found
+        A word document, list of word documents, or None if not found
     """
-    if client.db is None:
-        client.connect()
+    # Ensure client is connected asynchronously
+    if client.async_db is None:
+        await client.connect_async()
         
-    collection = client.db['word']
+    collection = client.async_db['words']
+    
     try:
         # Search by wordid if provided
         if wordid is not None:
-            return collection.find_one({"wordid": wordid})
+            return await collection.find_one({"wordid": wordid})
         
-        # Search by exact word if provided
+        # Search by word if provided
         if word is not None:
-            return collection.find_one({"word": word})
+            if partial_match:
+                # Use regex for partial matching
+                regex_pattern = {"$regex": f".*{word}.*", "$options": "i"}
+                cursor = collection.find({"word": regex_pattern})
+                return [doc async for doc in cursor]
+            else:
+                # Exact match
+                return await collection.find_one({"word": word})
     
-            
         # If no search criteria provided, return all words
-        return list(collection.find())
+        cursor = collection.find()
+        return [doc async for doc in cursor]
     except Exception as e:
         print(f"Error finding word:", e)
+        raise e
 
-def delete_word(client, word=None, wordid=None) -> bool:
+async def update_word(client, wordid, update_data):
+    """
+    Update word information
+    
+    Args:
+        client: MongoDBClient instance
+        wordid: Word ID to update
+        update_data: Dictionary of fields to update
+        
+    Returns:
+        Boolean indicating success
+    """
+    # Ensure client is connected asynchronously
+    if client.async_db is None:
+        await client.connect_async()
+        
+    collection = client.async_db['words']
+    
+    try:
+        result = await collection.update_one(
+            {"wordid": wordid},
+            {"$set": update_data}
+        )
+        
+        if result.modified_count > 0:
+            print(f"Word {wordid} successfully updated")
+            return True
+        else:
+            print(f"No changes made to word {wordid}")
+            return False
+    except Exception as e:
+        print(f"Error updating word:", e)
+        raise e
+
+async def delete_word(client, word=None, wordid=None) -> bool:
     """
     Delete a word by word or wordid
     
@@ -106,22 +154,27 @@ def delete_word(client, word=None, wordid=None) -> bool:
     Returns:
         Boolean indicating if the word was deleted
     """
-    if client.db is None:
-        client.connect()
+    # Ensure client is connected asynchronously
+    if client.async_db is None:
+        await client.connect_async()
         
-    collection = client.db['word']
+    collection = client.async_db['words']
+    
     try:
+        query = {}
+        
         # Delete by wordid if provided
         if wordid is not None:
-            result = collection.delete_one({"wordid": wordid})
-            
+            query["wordid"] = wordid
         # Delete by word if provided
         elif word is not None:
-            result = collection.delete_one({"word": word})
+            query["word"] = word
         else:
             print("Either word or wordid must be provided")
             return False
             
+        result = await collection.delete_one(query)
+        
         if result.deleted_count > 0:
             print(f"Word successfully deleted")
             return True
@@ -130,3 +183,4 @@ def delete_word(client, word=None, wordid=None) -> bool:
             return False
     except Exception as e:
         print(f"Error deleting word:", e)
+        raise e
