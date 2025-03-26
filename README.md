@@ -32,7 +32,7 @@ To run just the backend API:
 
 ```
 cd backend
-uvicorn app.main:app --reload
+python -m uvicorn app.main:app --reload
 ```
 
 ### Frontend Only
