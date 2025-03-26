@@ -9,7 +9,8 @@ from ..models.user_model import UserCreate, UserResponse, Token, RefreshToken
 from ..auth.auth_handler import get_password_hash, authenticate_user, get_current_user
 from ..auth.jwt_handler import create_access_token, create_refresh_token, verify_token
 from ..auth.token_blacklist import add_to_blacklist
-from ..database.mongodb_connection import get_db
+from ..database.mongodb_connection import get_db, get_mongodb_client
+import mongodb_utils.user as mdb
 from ..config import settings
 from ..utils.timezone_utils import get_hk_time, convert_to_hk_time, HK_TIMEZONE
 
@@ -17,42 +18,10 @@ router = APIRouter(tags=["Authentication"])
 
 @router.post("/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
 async def register_user(user_data: UserCreate):
-    """
-    Register a new user in the system.
-    
-    - **user_data**: User information including username, email, and password
-    
-    Returns a newly created user without the password hash.
-    
-    Raises:
-      - 400: Username or email already exists
-      - 422: Invalid input data
-    """
     try:
-        # Get database instance
-        db = await get_db()
+        client = await get_mongodb_client()
         
-        # Check if username or email already exists
-        existing_user = await db.users.find_one({
-            "$or": [
-                {"username": user_data.username},
-                {"email": user_data.email}
-            ]
-        })
-        
-        if existing_user:
-            # Return specific error message based on which field is duplicated
-            if existing_user["username"] == user_data.username:
-                detail = "Username already registered"
-            else:
-                detail = "Email already registered"
-                
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=detail
-            )
-        
-        # Hash password and create user
+        # Hash password
         hashed_password = get_password_hash(user_data.password)
         
         user_obj = {
@@ -64,13 +33,13 @@ async def register_user(user_data: UserCreate):
             "last_login": None
         }
         
-        result = await db.users.insert_one(user_obj)
-        user_obj["user_id"] = str(result.inserted_id)
+        # Add user to database
+        userid = await mdb.add_user(client, user_obj)
+        
+        # Add the user_id to the response object
+        user_obj["user_id"] = str(userid)
         
         return UserResponse(**user_obj)
-    except HTTPException as he:
-        # Re-raise HTTP exceptions (like our 400 Bad Request)
-        raise he
     except Exception as e:
         print(f"Registration error: {str(e)}")
         raise HTTPException(
