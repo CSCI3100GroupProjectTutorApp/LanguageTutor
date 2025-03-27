@@ -1,12 +1,12 @@
 /**
  * Authentication service for the language tutoring application
  */
-import { apiClient, setAuthToken, clearAuthToken } from './client';
+import { apiClient, setAuthToken, clearAuthToken, APIError } from './client';
 import { API_ENDPOINTS } from './config';
 
 // Types
 export interface LoginCredentials {
-  email: string;
+  username: string;
   password: string;
 }
 
@@ -29,11 +29,21 @@ export interface AuthResponse {
 }
 
 /**
- * Login user with email and password
+ * Login user with username and password
  */
 export const login = async (credentials: LoginCredentials): Promise<AuthResponse> => {
   try {
-    const response = await apiClient.post<AuthResponse>(API_ENDPOINTS.LOGIN, credentials);
+    // Convert credentials to FormData
+    const formData = new URLSearchParams();
+    formData.append('username', credentials.username);
+    formData.append('password', credentials.password);
+
+    const response = await apiClient.post<AuthResponse>(
+      API_ENDPOINTS.LOGIN, 
+      formData.toString(),
+      { 'Content-Type': 'application/x-www-form-urlencoded' }
+    );
+    
     // Store the token
     if (response.access_token) {
       setAuthToken(response.access_token);
@@ -53,19 +63,22 @@ export const login = async (credentials: LoginCredentials): Promise<AuthResponse
 /**
  * Register a new user
  */
-export const register = async (userData: RegisterData): Promise<AuthResponse> => {
+export const register = async (userData: RegisterData): Promise<{ message: string }> => {
   try {
-    const response = await apiClient.post<AuthResponse>(API_ENDPOINTS.REGISTER, userData);
-    // Store the token
-    if (response.access_token) {
-      setAuthToken(response.access_token);
-      // Store tokens in localStorage for web
-      if (typeof window !== 'undefined' && window.localStorage) {
-        localStorage.setItem('auth_token', response.access_token);
-        localStorage.setItem('refresh_token', response.refresh_token);
-      }
+    const response = await apiClient.post<any>(API_ENDPOINTS.REGISTER, userData);
+    
+    // Check if the response contains any indication of user already existing
+    if (response.detail?.includes('already exists') || 
+        response.message?.includes('already exists') ||
+        response.error?.includes('already exists')) {
+      throw new APIError(
+        'Username or email already exists. Please choose different ones.',
+        409,
+        response
+      );
     }
-    return response;
+    
+    return { message: "Registration successful! Please log in." };
   } catch (error) {
     console.error('Registration failed:', error);
     throw error;

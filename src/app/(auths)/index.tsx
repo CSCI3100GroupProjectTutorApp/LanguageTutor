@@ -1,165 +1,162 @@
-import { StyleSheet, Text, View, Dimensions,Image, TextInput, TouchableOpacity, ActivityIndicator, 
-        KeyboardAvoidingView, Platform,ScrollView, Alert } from 'react-native'
-import React, {useState} from 'react'
+import { StyleSheet, Text, View, Dimensions, Image, TextInput, TouchableOpacity, ActivityIndicator, 
+        KeyboardAvoidingView, Platform, ScrollView, Alert } from 'react-native'
+import React, { useState } from 'react'
 import { Link, useRouter } from 'expo-router'
-import {AntDesign,Ionicons} from '@expo/vector-icons'
+import { AntDesign, Ionicons } from '@expo/vector-icons'
+import { login } from '../../api/auth'
 
 const Login = () => {
     const [username, setUsername] = useState("");
     const [password, setPassword] = useState("");
     const [showPassword, setShowPassword] = useState(false);
-    const [isLoading, setIsLoading] = useState(false); 
-    const [error, setError] = useState("");
+    const [isLoading, setIsLoading] = useState(false);
+    const [errorMessage, setErrorMessage] = useState(""); 
     const router = useRouter();
     
     const handleLogin = async () => {
+      // Clear any previous errors
+      setErrorMessage("");
+      
       // Validate inputs
       if (!username || !password) {
-        setError("Please enter both username and password");
+        setErrorMessage("Please enter both username and password");
         return;
       }
       
       setIsLoading(true);
-      setError("");
       
       try {
-        // Call the login API
-        const response = await fetch('http://127.0.0.1:8000/login', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
-          },
-          body: `username=${encodeURIComponent(username)}&password=${encodeURIComponent(password)}`,
-        });
-        
-        if (response.ok) {
-          const data = await response.json();
-          console.log("Login successful:", data);
-          
-          // Store the token (in a real app, you'd save this to secure storage)
-          // For now, just navigate to the main app
-          router.push('../(tabs)');
+        const response = await login({ username, password });
+        console.log("Login successful:", response);
+        router.push('../(tabs)');
+      } catch (err: any) {
+        // Handle specific error cases
+        if (err.message?.includes('401')) {
+          setErrorMessage("Invalid username or password");
+        } else if (err.message?.includes('404')) {
+          setErrorMessage("User not found");
+        } else if (err.message?.includes('timeout')) {
+          setErrorMessage("Connection timeout. Please check your internet connection");
         } else {
-          setError("Invalid username or password");
+          setErrorMessage("Unable to log in. Please try again later");
         }
-      } catch (err) {
-        console.error("Login error:", err);
-        setError("Connection error. Please try again.");
       } finally {
         setIsLoading(false);
       }
-    }
+    };
     
-  return (
-    <KeyboardAvoidingView style={{flex:1}} behavior={Platform.OS === 'ios' ? "padding" : "height"}>
-    <View style={styles.container}>
-        <View style={styles.topIllustration}>
+    return (
+      <KeyboardAvoidingView style={{flex:1}} behavior={Platform.OS === 'ios' ? "padding" : "height"}>
+        <View style={styles.container}>
+          <View style={styles.topIllustration}>
             <Image
-                source={require("../../../assets/image/logo.png")}
-                style={styles.illustrationImage}
-                resizeMode='contain'
+              source={require("../../../assets/image/logo.png")}
+              style={styles.illustrationImage}
+              resizeMode='contain'
             />
-        </View>
-        <View style={{alignItems:'center', marginBottom:24}}>
+          </View>
+          <View style={{alignItems:'center', marginBottom:24}}>
             <Text style={styles.title}>Welcome Back !</Text>
-        </View>
-        <View style={styles.inputGroup}>
-            <View style={styles.inputContainer}>
-                <AntDesign
-                    name="user"
-                    size={20}
-                    color='gray'
-                    style={styles.inputIcon}
-                />
-                <TextInput
-                    style={styles.input}
-                    placeholder='Enter your Username'
-                    placeholderTextColor={"#808080"}
-                    value={username}
-                    onChangeText={setUsername}
-                    autoCapitalize='none'
-                />
+          </View>
+          <View style={styles.inputGroup}>
+            <View style={[styles.inputContainer, errorMessage ? styles.inputError : null]}>
+              <TextInput
+                style={styles.input}
+                placeholder='Enter your Username'
+                placeholderTextColor={"#808080"}
+                value={username}
+                onChangeText={(text) => {
+                  setUsername(text);
+                  setErrorMessage(""); // Clear error when user types
+                }}
+                autoCapitalize='none'
+              />
             </View>
-        </View>
-        <View style={styles.inputGroup}>
-            <View style={styles.inputContainer}>
-                <AntDesign
-                    name="lock"
-                    size={20}
-                    color='gray'
-                    style={styles.inputIcon}
+          </View>
+          <View style={styles.inputGroup}>
+            <View style={[styles.inputContainer, errorMessage ? styles.inputError : null]}>
+              <AntDesign
+                name="lock"
+                size={20}
+                color='gray'
+                style={styles.inputIcon}
+              />
+              <TextInput
+                style={styles.input}
+                placeholder='Enter your Password'
+                placeholderTextColor={"#808080"}
+                value={password}
+                onChangeText={(text) => {
+                  setPassword(text);
+                  setErrorMessage(""); // Clear error when user types
+                }}
+                autoCapitalize='none'
+                secureTextEntry={!showPassword}
+              />
+              <TouchableOpacity
+                onPress={() => setShowPassword(!showPassword)}
+                style={styles.eyeIcon}
+              >
+                <Ionicons
+                  name={showPassword ? "eye-outline" : "eye-off-outline"}
+                  size={20}
+                  color="#703682"
                 />
-                <TextInput
-                    style={styles.input}
-                    placeholder='Enter your Password'
-                    placeholderTextColor={"#808080"}
-                    value={password}
-                    onChangeText={setPassword}
-                    autoCapitalize='none'
-                    secureTextEntry={!showPassword}
-                />
-                <TouchableOpacity
-                    onPress ={()=>setShowPassword(!showPassword)}
-                    style={styles.eyeIcon}
-                >
-                    <Ionicons
-                        name={showPassword? "eye-outline" : "eye-off-outline"}
-                        size={20}
-                        color="#703682"
-                    />
-                </TouchableOpacity>
+              </TouchableOpacity>
             </View>
-        </View>
-        
-        {/* Display error message */}
-        {error ? <Text style={styles.errorText}>{error}</Text> : null}
-        
-        <TouchableOpacity style={styles.button} onPress={handleLogin} disabled={isLoading}>
+          </View>
+          
+          {errorMessage ? (
+            <View style={styles.errorContainer}>
+              <Text style={styles.errorText}>{errorMessage}</Text>
+            </View>
+          ) : null}
+          
+          <TouchableOpacity style={styles.button} onPress={handleLogin} disabled={isLoading}>
             {isLoading ? (
-                <ActivityIndicator color ="white"/>
-            ): (
-                <Text style={styles.buttonText}>Log in</Text>    
-            )
-            }
-        </TouchableOpacity>
-        <Text style={styles.orText}>------------------- Or sign in with -------------------</Text>
-        <View style={styles.socialContainer}>
-        <TouchableOpacity style={styles.socialButton}>
-          <Image
-            source={{
-              uri: "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c1/Google_%22G%22_logo.svg/1280px-Google_%22G%22_logo.svg.png",
-            }}
-            style={styles.socialIcon}
-          />
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.socialButton}>
-          <Image
-            source={{
-              uri: "https://upload.wikimedia.org/wikipedia/commons/0/05/Facebook_Logo_%282019%29.png",
-            }}
-            style={styles.socialIcon}
-          />
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.socialButton}>
-          <Image
-            source={{
-              uri: "https://upload.wikimedia.org/wikipedia/commons/thumb/c/ce/X_logo_2023.svg/1920px-X_logo_2023.svg.png",
-            }}
-            style={styles.socialIcon}
-          />
-        </TouchableOpacity>
-      </View>
-
-      <View style={{justifyContent:'center',flexDirection:"row"}}>     
-        <Text style={styles.footerText}>Don't have an account?</Text>
-        <Link href='/signup' asChild>
-            <TouchableOpacity>
-                <Text style={styles.signUpText}>Sign Up</Text>
+              <ActivityIndicator color="white"/>
+            ) : (
+              <Text style={styles.buttonText}>Log in</Text>    
+            )}
+          </TouchableOpacity>
+          <Text style={styles.orText}>------------------- Or sign in with -------------------</Text>
+          <View style={styles.socialContainer}>
+            <TouchableOpacity style={styles.socialButton}>
+              <Image
+                source={{
+                  uri: "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c1/Google_%22G%22_logo.svg/1280px-Google_%22G%22_logo.svg.png",
+                }}
+                style={styles.socialIcon}
+              />
             </TouchableOpacity>
-        </Link>
-      </View> 
-    </View>
-    </KeyboardAvoidingView>
+            <TouchableOpacity style={styles.socialButton}>
+              <Image
+                source={{
+                  uri: "https://upload.wikimedia.org/wikipedia/commons/0/05/Facebook_Logo_%282019%29.png",
+                }}
+                style={styles.socialIcon}
+              />
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.socialButton}>
+              <Image
+                source={{
+                  uri: "https://upload.wikimedia.org/wikipedia/commons/thumb/c/ce/X_logo_2023.svg/1920px-X_logo_2023.svg.png",
+                }}
+                style={styles.socialIcon}
+              />
+            </TouchableOpacity>
+          </View>
+
+          <View style={{justifyContent:'center',flexDirection:"row"}}>     
+            <Text style={styles.footerText}>Don't have an account?</Text>
+            <Link href='/signup' asChild>
+              <TouchableOpacity>
+                <Text style={styles.signUpText}>Sign Up</Text>
+              </TouchableOpacity>
+            </Link>
+          </View> 
+        </View>
+      </KeyboardAvoidingView>
     )
 }
 
@@ -284,5 +281,17 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     fontSize: 16,
     marginLeft:5
+  },
+  errorContainer: {
+    marginBottom: 15,
+    padding: 10,
+    backgroundColor: 'rgba(255,0,0,0.1)',
+    borderRadius: 5,
+    borderWidth: 1,
+    borderColor: 'red',
+  },
+  inputError: {
+    borderColor: 'red',
+    borderWidth: 1,
   },
 });

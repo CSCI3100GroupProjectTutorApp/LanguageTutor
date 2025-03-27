@@ -4,6 +4,17 @@
  */
 import { API_BASE_URL, DEFAULT_HEADERS, REQUEST_TIMEOUT } from './config';
 
+export class APIError extends Error {
+  constructor(
+    message: string,
+    public status?: number,
+    public data?: any
+  ) {
+    super(message);
+    this.name = 'APIError';
+  }
+}
+
 // Token management
 let accessToken: string | null = null;
 
@@ -53,11 +64,15 @@ const apiRequest = async <T>(
   const options: RequestInit = {
     method,
     headers,
-    credentials: 'include',
+    mode: 'cors'
   };
   
-  if (data && (method === 'POST' || method === 'PUT' || method === 'PATCH')) {
-    options.body = JSON.stringify(data);
+  if (data) {
+    if (headers['Content-Type'] === 'application/x-www-form-urlencoded') {
+      options.body = data;
+    } else if (method === 'POST' || method === 'PUT' || method === 'PATCH') {
+      options.body = JSON.stringify(data);
+    }
   }
   
   // Create a timeout promise
@@ -72,21 +87,36 @@ const apiRequest = async <T>(
       timeoutPromise
     ]);
     
-    if (!response.ok) {
-      // Try to parse error response
-      const errorData = await response.json().catch(() => null);
-      throw new Error(
-        errorData?.detail || `API error: ${response.status} ${response.statusText}`
+    const contentType = response.headers.get('content-type');
+    const isJson = contentType && contentType.indexOf('application/json') !== -1;
+    const responseData = isJson ? await response.json() : await response.text();
+    
+    if (!response.ok || responseData?.error || 
+        (typeof responseData === 'string' && responseData.includes('already exists'))) {
+      // Try to extract error message
+      let errorMessage = '';
+      if (typeof responseData === 'string') {
+        errorMessage = responseData;
+      } else if (responseData?.detail) {
+        errorMessage = Array.isArray(responseData.detail) 
+          ? responseData.detail.map((err: any) => err.msg).join(', ')
+          : responseData.detail;
+      } else if (responseData?.message) {
+        errorMessage = responseData.message;
+      } else if (responseData?.error) {
+        errorMessage = responseData.error;
+      } else {
+        errorMessage = `API error: ${response.status} ${response.statusText}`;
+      }
+      
+      throw new APIError(
+        errorMessage,
+        response.status,
+        responseData
       );
     }
     
-    // Check if response is JSON
-    const contentType = response.headers.get('content-type');
-    if (contentType && contentType.indexOf('application/json') !== -1) {
-      return await response.json() as T;
-    }
-    
-    return await response.text() as unknown as T;
+    return responseData as T;
   } catch (error) {
     console.error('API request failed:', error);
     throw error;

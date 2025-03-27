@@ -21,6 +21,22 @@ async def register_user(user_data: UserCreate):
     try:
         client = await get_mongodb_client()
         
+        # Check if username exists
+        existing_user = await client.async_db.users.find_one({"username": user_data.username})
+        if existing_user:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Username already exists"
+            )
+            
+        # Check if email exists
+        existing_email = await client.async_db.users.find_one({"email": user_data.email})
+        if existing_email:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Email already exists"
+            )
+        
         # Hash password
         hashed_password = get_password_hash(user_data.password)
         
@@ -40,7 +56,20 @@ async def register_user(user_data: UserCreate):
         user_obj["user_id"] = str(userid)
         
         return UserResponse(**user_obj)
+    except HTTPException as he:
+        raise he
     except Exception as e:
+        if "duplicate key error" in str(e):
+            if "username" in str(e):
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail="Username already exists"
+                )
+            elif "email" in str(e):
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail="Email already exists"
+                )
         print(f"Registration error: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
