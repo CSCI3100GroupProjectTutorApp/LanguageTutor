@@ -10,7 +10,7 @@ from ..auth.auth_handler import get_password_hash, authenticate_user, get_curren
 from ..auth.jwt_handler import create_access_token, create_refresh_token, verify_token
 from ..auth.token_blacklist import add_to_blacklist
 from ..database.mongodb_connection import get_db, get_mongodb_client
-import mongodb_utils.user as mdb
+import mongodb_utils as mdb
 from ..config import settings
 from ..utils.timezone_utils import get_hk_time, convert_to_hk_time, HK_TIMEZONE
 
@@ -39,13 +39,14 @@ async def register_user(user_data: UserCreate):
         
         # Hash password
         hashed_password = get_password_hash(user_data.password)
-        
+        time_now = get_hk_time()
+
         user_obj = {
             "username": user_data.username,
             "email": user_data.email,
             "hashed_password": hashed_password,
             "is_active": True,
-            "created_at": get_hk_time(),
+            "created_at": time_now,
             "last_login": None
         }
         
@@ -54,6 +55,9 @@ async def register_user(user_data: UserCreate):
         
         # Add the user_id to the response object
         user_obj["user_id"] = str(userid)
+
+        # Add registration event to usage logs
+        await mdb.add_event(client, userid, "register", time_now)
         
         return UserResponse(**user_obj)
     except HTTPException as he:
@@ -89,6 +93,7 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends()):
     Raises:
       - 401: Invalid credentials
     """
+    client = await get_mongodb_client()
     db = await get_db()
     user = await authenticate_user(form_data.username, form_data.password)
     
@@ -99,11 +104,19 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends()):
             headers={"WWW-Authenticate": "Bearer"},
         )
     
+    time_now = get_hk_time()
     # Update last login time
     await db.users.update_one(
         {"username": user.username},
-        {"$set": {"last_login": get_hk_time()}}
+        {"$set": {"last_login": time_now}}
     )
+
+    user_doc = await mdb.get_user(client, username=user.username)
+    userid = user_doc["userid"]
+
+    # Add login event to usage logs
+    await mdb.add_event(client, userid, "login", time_now)
+
     
     # Create access token
     access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
@@ -159,6 +172,15 @@ async def logout(request: Request, current_user = Depends(get_current_user)):
             {"username": current_user.username},
             {"$unset": {"refresh_token": ""}}
         )
+
+        time_now = get_hk_time()
+        client = await get_mongodb_client()
+        user_doc = await mdb.get_user(client, username=current_user.username)
+        print(f"User document: {user_doc}")
+        userid = user_doc["userid"]
+
+        # Add login event to usage logs
+        await mdb.add_event(client, userid, "logout", time_now)
         
         return {"detail": "Successfully logged out"}
     except Exception as e:
