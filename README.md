@@ -75,8 +75,8 @@ The application uses a custom MongoDB client that supports both synchronous and 
 
 ## Database
 
-Under the folder database, mongodb_utils is library for updating MongoDB database.
-Folder sqlite is the implementation of local sqlite storage where the data can be accessed under the data folder in the root directory.
+Under `database/` directory, mongodb_utils is library for updating MongoDB database.
+sqlite is the implementation of local sqlite storage where the data can be accessed under the data folder in the root directory.
 
 To check the content of the data :
 
