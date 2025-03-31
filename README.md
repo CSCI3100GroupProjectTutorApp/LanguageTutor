@@ -91,6 +91,8 @@ SELECT * FROM sync_queue;
 .exit
 ```
 How to install sqlite:
+
 Refer to this link: https://www.tutorialspoint.com/sqlite/sqlite_installation.htm
+
 or this video: https://www.youtube.com/watch?v=ZiJb7EIaRCE
 
