@@ -8,7 +8,7 @@ import logging
 # Use the new mongodb connection module
 from .database.mongodb_connection import connect_to_mongodb, close_mongodb_connection, get_db
 from .database.init_db import init_db
-from .routes import auth_routes, user_routes, utility_routes
+from .routes import router
 from .config import settings
 from .auth.token_blacklist import is_blacklisted
 
@@ -50,13 +50,13 @@ async def startup_db_client():
 
 @app.on_event("shutdown")
 async def shutdown_db_client():
+    logger.info("Closing database connection...")
     await close_mongodb_connection()
 
-# Include routers
-app.include_router(auth_routes.router)
-app.include_router(user_routes.router)
-app.include_router(utility_routes.router, prefix="/utils")
+# Include all routes
+app.include_router(router)
 
+# Root endpoint
 @app.get("/")
 async def root():
     return {"message": "Welcome to the Language Tutoring API"}
