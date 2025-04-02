@@ -10,7 +10,7 @@ from ..auth.auth_handler import get_password_hash, authenticate_user, get_curren
 from ..auth.jwt_handler import create_access_token, create_refresh_token, verify_token
 from ..auth.token_blacklist import add_to_blacklist
 from ..database.mongodb_connection import get_db, get_mongodb_client
-import mongodb_utils as mdb
+from ..database import mongodb_utils as mdb
 from ..config import settings
 from ..utils.timezone_utils import get_hk_time, convert_to_hk_time, HK_TIMEZONE
 

@@ -52,3 +52,18 @@ local.properties
 .vscode/
 *.swp
 *.swo 
+
+# Test-specific files
+tests/test_*.py
+test_*.py
+**/test_*.db
+*.db
+
+# Specific test databases
+test_auto_sync.db
+test_manual_sync.db
+test_offline_sync.db
+
+# Test results and logs
+tests/logs/
+tests/results/
