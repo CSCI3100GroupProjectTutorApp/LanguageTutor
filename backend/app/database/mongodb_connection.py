@@ -10,7 +10,7 @@ from pathlib import Path
 ROOT_DIR = Path(__file__).resolve().parent.parent.parent.parent
 sys.path.append(str(ROOT_DIR))
 
-from mongodb_utils.client import MongoDBClient
+from .mongodb_utils.client import MongoDBClient
 from ..config import settings
 
 # Global client instance
