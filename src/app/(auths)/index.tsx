@@ -1,125 +1,168 @@
-import { StyleSheet, Text, View, Dimensions,Image, TextInput, TouchableOpacity, ActivityIndicator, 
-        KeyboardAvoidingView, Platform,ScrollView } from 'react-native'
-import React, {useState} from 'react'
-import { Link, useRouter } from 'expo-router'
-import {AntDesign,Ionicons} from '@expo/vector-icons'
+import { StyleSheet, Text, View, Dimensions, Image, TextInput, TouchableOpacity, ActivityIndicator, 
+        KeyboardAvoidingView, Platform,  } from 'react-native'
+import React, { useState } from 'react'
+import { Link, useRouter, useNavigation } from 'expo-router'
+import { AntDesign, Ionicons } from '@expo/vector-icons'
+import { login } from '../../api/auth'
 
 const Login = () => {
     const [username, setUsername] = useState("");
     const [password, setPassword] = useState("");
     const [showPassword, setShowPassword] = useState(false);
-    const [isLoading, setIsLoading] = useState(false); 
+    const [isLoading, setIsLoading] = useState(false);
+    const [errorMessage, setErrorMessage] = useState(""); 
     const router = useRouter();
     
-    const handleLogin = () => {
-      router.push('../(tabs)')
-    }
-  return (
-    <KeyboardAvoidingView style={{flex:1}} behavior={Platform.OS === 'ios' ? "padding" : "height"}>
-    <View style={styles.container}>
-        <View style={styles.topIllustration}>
+    const handleLogin = async () => {
+      // Clear any previous errors
+      setErrorMessage("");
+      
+      // Validate inputs
+      if (!username || !password) {
+        setErrorMessage("Please enter both username and password");
+        return;
+      }
+      
+      setIsLoading(true);
+      
+      try {
+        const response = await login({ username, password });
+        console.log("Login successful:", response);
+        router.push('../(tabs)');
+      } catch (err: any) {
+        // Handle specific error cases
+        if (err.message?.includes('401')) {
+          setErrorMessage("Invalid username or password");
+        } else if (err.message?.includes('404')) {
+          setErrorMessage("User not found");
+        } else if (err.message?.includes('timeout')) {
+          setErrorMessage("Connection timeout. Please check your internet connection");
+        } else {
+          setErrorMessage("Unable to log in. Please try again later");
+        }
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    return (
+      <KeyboardAvoidingView style={{flex:1}} behavior={Platform.OS === 'ios' ? "padding" : "height"}>
+        <View style={styles.container}>
+          <View style={styles.topIllustration}>
             <Image
-                source={require("../../../assets/image/logo.png")}
-                style={styles.illustrationImage}
-                resizeMode='contain'
+              source={require("../../../assets/image/logo.png")}
+              style={styles.illustrationImage}
+              resizeMode='contain'
             />
-        </View>
-        <View style={{alignItems:'center', marginBottom:24}}>
+          </View>
+          <View style={{alignItems:'center', marginBottom:24}}>
             <Text style={styles.title}>Welcome Back !</Text>
-        </View>
-        <View style={styles.inputGroup}>
+          </View>
+          <View style={styles.inputGroup}>
             <View style={styles.inputContainer}>
-                <AntDesign
-                    name="user"
-                    size={20}
-                    color='gray'
-                    style={styles.inputIcon}
-                />
-                <TextInput
-                    style={styles.input}
-                    placeholder='Enter your Username'
-                    placeholderTextColor={"#808080"}
-                    value={username}
-                    onChangeText={setUsername}
-                    autoCapitalize='none'
-                />
+            <AntDesign
+                name="user"
+                size={20}
+                color='gray'
+                style={styles.inputIcon}
+              />
+              <TextInput
+                style={styles.input}
+                placeholder='Enter your Username'
+                placeholderTextColor={"#808080"}
+                value={username}
+                onChangeText={(text) => {
+                  setUsername(text);
+                  setErrorMessage(""); // Clear error when user types
+                }}
+                autoCapitalize='none'
+              />
             </View>
-        </View>
-        <View style={styles.inputGroup}>
+          </View>
+          <View style={styles.inputGroup}>
             <View style={styles.inputContainer}>
-                <AntDesign
-                    name="lock"
-                    size={20}
-                    color='gray'
-                    style={styles.inputIcon}
+              <AntDesign
+                name="lock"
+                size={20}
+                color='gray'
+                style={styles.inputIcon}
+              />
+              <TextInput
+                style={styles.input}
+                placeholder='Enter your Password'
+                placeholderTextColor={"#808080"}
+                value={password}
+                onChangeText={(text) => {
+                  setPassword(text);
+                  setErrorMessage(""); // Clear error when user types
+                }}
+                autoCapitalize='none'
+                secureTextEntry={!showPassword}
+              />
+              <TouchableOpacity
+                onPress={() => setShowPassword(!showPassword)}
+                style={styles.eyeIcon}
+              >
+                <Ionicons
+                  name={showPassword ? "eye-outline" : "eye-off-outline"}
+                  size={20}
+                  color="#703682"
                 />
-                <TextInput
-                    style={styles.input}
-                    placeholder='Enter your Password'
-                    placeholderTextColor={"#808080"}
-                    value={password}
-                    onChangeText={setPassword}
-                    autoCapitalize='none'
-                    secureTextEntry={!showPassword}
-                />
-                <TouchableOpacity
-                    onPress ={()=>setShowPassword(!showPassword)}
-                    style={styles.eyeIcon}
-                >
-                    <Ionicons
-                        name={showPassword? "eye-outline" : "eye-off-outline"}
-                        size={20}
-                        color="#703682"
-                    />
-                </TouchableOpacity>
+              </TouchableOpacity>
             </View>
-        </View>
-        <TouchableOpacity style={styles.button} onPress={handleLogin} disabled={isLoading}>
+          </View>
+          
+          {errorMessage ? (
+            <View style={styles.errorContainer}>
+              <Text style={styles.errorText}>{errorMessage}</Text>
+            </View>
+          ) : null}
+          
+          <TouchableOpacity style={styles.button} onPress={handleLogin} disabled={isLoading}>
             {isLoading ? (
-                <ActivityIndicator color ="white"/>
-            ): (
-                <Text style={styles.buttonText}>Log in</Text>    
-            )
-            }
-        </TouchableOpacity>
-        <Text style={styles.orText}>------------------- Or sign in with -------------------</Text>
-        <View style={styles.socialContainer}>
-        <TouchableOpacity style={styles.socialButton}>
-          <Image
-            source={{
-              uri: "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c1/Google_%22G%22_logo.svg/1280px-Google_%22G%22_logo.svg.png",
-            }}
-            style={styles.socialIcon}
-          />
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.socialButton}>
-          <Image
-            source={{
-              uri: "https://upload.wikimedia.org/wikipedia/commons/0/05/Facebook_Logo_%282019%29.png",
-            }}
-            style={styles.socialIcon}
-          />
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.socialButton}>
-          <Image
-            source={{
-              uri: "https://upload.wikimedia.org/wikipedia/commons/thumb/c/ce/X_logo_2023.svg/1920px-X_logo_2023.svg.png",
-            }}
-            style={styles.socialIcon}
-          />
-        </TouchableOpacity>
-      </View>
-
-      <View style={{justifyContent:'center',flexDirection:"row"}}>     
-        <Text style={styles.footerText}>Don't have an account?</Text>
-        <Link href='/signup' asChild>
-            <TouchableOpacity>
-                <Text style={styles.signUpText}>Sign Up</Text>
+              <ActivityIndicator color="white"/>
+            ) : (
+              <Text style={styles.buttonText}>Log in</Text>    
+            )}
+          </TouchableOpacity>
+          <Text style={styles.orText}>------------------- Or sign in with -------------------</Text>
+          <View style={styles.socialContainer}>
+            <TouchableOpacity style={styles.socialButton}>
+              <Image
+                source={{
+                  uri: "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c1/Google_%22G%22_logo.svg/1280px-Google_%22G%22_logo.svg.png",
+                }}
+                style={styles.socialIcon}
+              />
             </TouchableOpacity>
-        </Link>
-      </View> 
-    </View>
-    </KeyboardAvoidingView>
+            <TouchableOpacity style={styles.socialButton}>
+              <Image
+                source={{
+                  uri: "https://upload.wikimedia.org/wikipedia/commons/0/05/Facebook_Logo_%282019%29.png",
+                }}
+                style={styles.socialIcon}
+              />
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.socialButton}>
+              <Image
+                source={{
+                  uri: "https://upload.wikimedia.org/wikipedia/commons/thumb/c/ce/X_logo_2023.svg/1920px-X_logo_2023.svg.png",
+                }}
+                style={styles.socialIcon}
+              />
+            </TouchableOpacity>
+          </View>
+
+          <View style={{justifyContent:'center',flexDirection:"row"}}>     
+            <Text style={styles.footerText}>Don't have an account?</Text>
+            <Link href='/signup' asChild>
+              <TouchableOpacity>
+                <Text style={styles.signUpText}>Sign Up</Text>
+              </TouchableOpacity>
+            </Link>
+          </View> 
+        </View>
+      </KeyboardAvoidingView>
     )
 }
 
@@ -133,14 +176,18 @@ const styles = StyleSheet.create({
     backgroundColor: "#703682",
     padding: 20,
     justifyContent: "center",
+    maxWidth: Platform.OS === 'web' ? 480 : '100%',
+    alignSelf: Platform.OS === 'web' ? 'center' : 'stretch',
+    minHeight: Platform.OS === 'web' ? '100%' : 'auto',
   },
   topIllustration: {
     alignItems: "center",
     width: "100%",
   },
   illustrationImage: {
-    width: width * 0.75,
-    height: width * 0.75,
+    width: Platform.OS === 'web' ? 200 : width * 0.75,
+    height: Platform.OS === 'web' ? 200 : width * 0.75,
+    maxWidth: '100%',
   },
   title: {
     fontSize: 32,
@@ -186,7 +233,6 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: "700",
   },
-  
   link: {
     color: "#2e5a2e",
     fontWeight: "600",
@@ -233,5 +279,21 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     fontSize: 16,
     marginLeft:5
+  },
+  errorContainer: {
+    marginBottom: 15,
+    padding: 10,
+    backgroundColor:"#703682",
+  },
+  errorText: {
+    color: 'red',
+    padding: 10,
+    marginBottom: 15,
+    textAlign: 'center',
+    fontWeight: "600",
+    fontSize:16,
+    borderWidth: 2,
+    borderColor: 'red',
+    borderRadius: 5,
   },
 });
