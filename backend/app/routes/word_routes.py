@@ -3,11 +3,14 @@ from fastapi import APIRouter, Depends, HTTPException, Body
 from typing import List, Optional
 from pydantic import BaseModel
 from ..dependencies import get_sqlite_storage, get_mongo_client
+<<<<<<< HEAD
 from ..database.mongodb_utils.word import find_word as mongo_find_word
 from ..dependencies import get_current_user
 from ..dependencies import UserInToken
 from ..database import mongodb_utils as mdb
 from ..utils.logger import logger
+=======
+>>>>>>> 7a6a2d4f06a87b27bc548d7e4193fdf7cdbaccbb
 
 router = APIRouter(
     prefix="/words",
