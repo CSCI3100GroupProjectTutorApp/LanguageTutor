@@ -91,8 +91,8 @@ async def shutdown_db_client():
 app.include_router(auth_routes.router)
 app.include_router(user_routes.router)
 app.include_router(utility_routes.router, prefix="/utils")
-app.include_router(word_routes.router, prefix="/words")
-app.include_router(sync_routes.router, prefix="/sync")
+app.include_router(word_routes.router)
+app.include_router(sync_routes.router)
 
 @app.get("/")
 async def root():

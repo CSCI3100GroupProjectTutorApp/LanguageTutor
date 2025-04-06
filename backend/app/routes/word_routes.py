@@ -3,7 +3,11 @@ from fastapi import APIRouter, Depends, HTTPException, Body
 from typing import List, Optional
 from pydantic import BaseModel
 from ..dependencies import get_sqlite_storage, get_mongo_client
-from ..database.mongodb_utils.word_operation import find_word as mongo_find_word
+from ..database.mongodb_utils.word import find_word as mongo_find_word
+from ..dependencies import get_current_user
+from ..dependencies import UserInToken
+from ..database import mongodb_utils as mdb
+from ..utils.logger import logger
 
 router = APIRouter(
     prefix="/words",
@@ -35,6 +39,15 @@ class Word(WordBase):
 
     class Config:
         orm_mode = True
+# Add this class for word response
+class WordResponse(BaseModel):
+    wordid: int
+    word: str
+    en_meaning: Optional[str] = ""
+    ch_meaning: Optional[str] = ""
+    part_of_speech: Optional[List[str]] = []
+    created_at: Optional[str] = ""
+    updated_at: Optional[str] = ""
 
 @router.post("/", response_model=Word, status_code=201)
 async def create_word(
@@ -156,3 +169,47 @@ async def get_word_by_text(
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to retrieve word: {str(e)}")
+    
+
+
+@router.get("/all", response_model=List[WordResponse])
+async def get_all_words(
+    current_user: UserInToken = Depends(get_current_user),
+    storage = Depends(get_sqlite_storage),
+    mongo_client = Depends(get_mongo_client)
+):
+    """
+    Get all words for the authenticated user.
+    """
+    try:
+        # Get user ID from MongoDB
+        user_doc = await mdb.get_user(mongo_client, username=current_user.username)
+        if not user_doc:
+            raise HTTPException(status_code=404, detail="User not found in database")
+            
+        # Extract user ID (handle both _id and userid fields)
+        if "userid" in user_doc:
+            user_id = str(user_doc["userid"])
+        else:
+            user_id = str(user_doc["_id"])
+        
+        # Get all words from SQLite
+        words = await storage.get_all_words(user_id=user_id)
+        
+        # Convert to response model
+        response = []
+        for word in words:
+            response.append(WordResponse(
+                wordid=word["wordid"],
+                word=word["word"],
+                en_meaning=word.get("en_meaning", ""),
+                ch_meaning=word.get("ch_meaning", ""),
+                part_of_speech=word.get("part_of_speech", []),
+                created_at=word.get("created_at", ""),
+                updated_at=word.get("updated_at", "")
+            ))
+        
+        return response
+    except Exception as e:
+        logger.error(f"Error getting all words: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error getting words: {str(e)}")

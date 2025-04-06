@@ -12,7 +12,7 @@ from typing import List, Dict, Any, Optional, Union
 import aiosqlite
 
 class WordStorage:
-    def __init__(self, db_path="word_data.db", auto_sync_interval=60):
+    def __init__(self, db_path="data\word_data.db", auto_sync_interval=60):
         """Initialize the SQLite storage for words.
         
         Args:

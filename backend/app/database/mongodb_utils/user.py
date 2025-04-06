@@ -13,7 +13,7 @@ Attributes in collection 'user':
     last_login: Timestamp of last login
 """
 
-async def add_user(client, document: dict) -> int:
+async def add_user(client, document: dict) -> str:
     """
     Add a new user to the user collection
     
@@ -22,7 +22,7 @@ async def add_user(client, document: dict) -> int:
         document: User information including username, email, and password
         
     Returns:
-        userid: The ID of the newly created user
+        userid: The ID of the newly created user (string representation of MongoDB _id)
     """
     # Ensure client is connected asynchronously
     if client.async_db is None:
@@ -41,25 +41,38 @@ async def add_user(client, document: dict) -> int:
         
         if existing_user:
             print(f"User '{document.get('username')}' already exists")
-            return existing_user.get("userid")
-        
-        # Find the maximum user ID
-        max_user = await collection.find_one({}, sort=[("userid", -1)])
-        if max_user and "userid" in max_user:
-            userid = max_user["userid"] + 1
-        else:
-            userid = 1  # Start with ID 1 if collection is empty
-        
-        # Add userid to the document
-        document["userid"] = userid
+            # Use _id from the existing user as the userid
+            existing_user_id = str(existing_user.get("_id"))
+            
+            # Update the existing user document to ensure it has a userid field
+            # that matches the _id (if it doesn't already)
+            if "userid" not in existing_user or existing_user["userid"] != existing_user_id:
+                await collection.update_one(
+                    {"_id": existing_user["_id"]},
+                    {"$set": {"userid": existing_user_id}}
+                )
+                print(f"Updated user '{document.get('username')}' with consistent userid: {existing_user_id}")
+            
+            return existing_user_id
         
         # If timestamps aren't provided, add them
         if "created_at" not in document:
             document["created_at"] = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         
-        # Insert the document
+        # Insert the document without userid first (MongoDB will create _id)
         result = await collection.insert_one(document)
-        print(f"User added. Inserted document ID: {result.inserted_id}")
+        inserted_id = result.inserted_id
+        
+        # Convert the MongoDB ObjectId to string to use as userid
+        userid = str(inserted_id)
+        
+        # Update the document to add the userid field that matches _id
+        await collection.update_one(
+            {"_id": inserted_id},
+            {"$set": {"userid": userid}}
+        )
+        
+        print(f"User added. Inserted document ID: {userid}")
         return userid
     except Exception as e:
         print(f"Error adding user:", e)
