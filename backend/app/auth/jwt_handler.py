@@ -6,15 +6,16 @@ from fastapi import HTTPException, status
 import secrets
 
 from ..config import settings
+from ..utils.timezone_utils import get_hk_time, HK_TIMEZONE
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
     """Create a new JWT access token"""
     to_encode = data.copy()
     
     if expires_delta:
-        expire = datetime.now(timezone.utc) + expires_delta
+        expire = get_hk_time() + expires_delta
     else:
-        expire = datetime.now(timezone.utc) + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+        expire = get_hk_time() + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     
     to_encode.update({"exp": expire, "type": "access"})
     encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
@@ -26,7 +27,7 @@ def create_refresh_token(data: dict):
     to_encode = data.copy()
     
     # Refresh tokens typically last longer than access tokens
-    expire = datetime.now(timezone.utc) + timedelta(days=7)  # 7 days
+    expire = get_hk_time() + timedelta(days=7)  # 7 days
     
     to_encode.update({"exp": expire, "type": "refresh"})
     encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)

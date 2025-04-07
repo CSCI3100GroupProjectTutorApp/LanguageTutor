@@ -1,5 +1,5 @@
-import { ScrollView, FlatList, FlatListComponent, StyleSheet, Text, View } from 'react-native'
-import React from 'react'
+import { ScrollView, FlatList, FlatListComponent, StyleSheet, Text, View, BackHandler, Alert } from 'react-native'
+import React, {useEffect} from 'react'
 import {WORDS} from '../../../assets/constants/Words'
 import PreviewWordlist from '../../components/Preview-Wordlist'
 import { Link } from "expo-router";
@@ -7,6 +7,31 @@ import {HomeHeader} from '../../components/Home-header'
 
 const Home = () => {
   const recentWords = WORDS.filter((item) => item.recent<10);
+
+  useEffect(() => {
+    const backAction = () => {
+      Alert.alert('Exit App', 'Do you want to exit the app?', [
+        {
+          text: 'Cancel',
+          onPress: () => null,
+          style: 'cancel',
+        },
+        {
+          text: 'Yes',
+          onPress: () => BackHandler.exitApp(),
+        },
+      ]);
+      return true; 
+    };
+
+  const backHandler = BackHandler.addEventListener(
+      'hardwareBackPress',
+      backAction
+    );
+
+  return () => backHandler.remove(); 
+  }, []);
+
   return (
     <ScrollView contentContainerStyle={styles.container}>
       <FlatList 
