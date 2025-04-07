@@ -1,7 +1,7 @@
 import { StyleSheet, Text, View, Dimensions, Image, TextInput, TouchableOpacity, ActivityIndicator, 
-        KeyboardAvoidingView, Platform, ScrollView, Alert } from 'react-native'
+        KeyboardAvoidingView, Platform,  } from 'react-native'
 import React, { useState } from 'react'
-import { Link, useRouter } from 'expo-router'
+import { Link, useRouter, useNavigation } from 'expo-router'
 import { AntDesign, Ionicons } from '@expo/vector-icons'
 import { login } from '../../api/auth'
 
@@ -59,7 +59,13 @@ const Login = () => {
             <Text style={styles.title}>Welcome Back !</Text>
           </View>
           <View style={styles.inputGroup}>
-            <View style={[styles.inputContainer, errorMessage ? styles.inputError : null]}>
+            <View style={styles.inputContainer}>
+            <AntDesign
+                name="user"
+                size={20}
+                color='gray'
+                style={styles.inputIcon}
+              />
               <TextInput
                 style={styles.input}
                 placeholder='Enter your Username'
@@ -74,7 +80,7 @@ const Login = () => {
             </View>
           </View>
           <View style={styles.inputGroup}>
-            <View style={[styles.inputContainer, errorMessage ? styles.inputError : null]}>
+            <View style={styles.inputContainer}>
               <AntDesign
                 name="lock"
                 size={20}
@@ -112,7 +118,7 @@ const Login = () => {
             </View>
           ) : null}
           
-          <TouchableOpacity style={styles.button} onPress={handleLogin} disabled={isLoading}>
+          <TouchableOpacity style={styles.button} onPress={()=>{router.push('../(tabs)')}} disabled={isLoading}>
             {isLoading ? (
               <ActivityIndicator color="white"/>
             ) : (
@@ -227,14 +233,6 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: "700",
   },
-  errorText: {
-    color: 'red',
-    backgroundColor: 'rgba(255,255,255,0.7)',
-    padding: 10,
-    borderRadius: 5,
-    marginBottom: 15,
-    textAlign: 'center',
-  },
   link: {
     color: "#2e5a2e",
     fontWeight: "600",
@@ -285,13 +283,17 @@ const styles = StyleSheet.create({
   errorContainer: {
     marginBottom: 15,
     padding: 10,
-    backgroundColor: 'rgba(255,0,0,0.1)',
-    borderRadius: 5,
-    borderWidth: 1,
-    borderColor: 'red',
+    backgroundColor:"#703682",
   },
-  inputError: {
+  errorText: {
+    color: 'red',
+    padding: 10,
+    marginBottom: 15,
+    textAlign: 'center',
+    fontWeight: "600",
+    fontSize:16,
+    borderWidth: 2,
     borderColor: 'red',
-    borderWidth: 1,
+    borderRadius: 5,
   },
 });
