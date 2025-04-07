@@ -1,17 +1,18 @@
-
-import {View, StyleSheet, Text, StatusBar, TouchableOpacity,Platform, ActivityIndicator, Alert, Linking} from 'react-native';
+import {View, StyleSheet, Text, StatusBar, TouchableOpacity, Platform, ActivityIndicator, Alert, Linking} from 'react-native';
 import {SafeAreaView, SafeAreaProvider} from 'react-native-safe-area-context';
 import React, {useState} from 'react';
 import { AntDesign, Ionicons } from "@expo/vector-icons";
 import * as DocumentPicker from 'expo-document-picker';
 import * as ImagePicker from "expo-image-picker";
+import { useRouter } from 'expo-router';
+import { getAuthToken } from '../../services/authService';
 
 const upload = () => {
-  
-  const [selectFile, setSelectFile] = useState<DocumentPicker.DocumentPickerAsset| null>(null)
-  const [photo, setPhoto] = useState<ImagePicker.ImagePickerAsset| null>(null)
+  const [selectFile, setSelectFile] = useState<DocumentPicker.DocumentPickerAsset | null>(null);
+  const [photo, setPhoto] = useState<ImagePicker.ImagePickerAsset | null>(null);
   const [errorMessage, setErrorMessage] = useState(""); 
   const [isLoading, setIsLoading] = useState(false);
+  const router = useRouter();
 
   const handleSelectFile = async () => {
     setErrorMessage("")
@@ -24,23 +25,21 @@ const upload = () => {
                 "text/plain"
         ],
         copyToCacheDirectory: true,
-        multiple:false
-      })
+        multiple: false
+      });
 
       if (!result.canceled) {
-        const successResult = result as DocumentPicker.DocumentPickerSuccessResult
-        setSelectFile(successResult.assets[0])
-        setPhoto(null)
+        const successResult = result as DocumentPicker.DocumentPickerSuccessResult;
+        setSelectFile(successResult.assets[0]);
+        setPhoto(null);
       } else {
-        Alert.alert("No file selected","Select a File to Upload");
+        Alert.alert("No file selected", "Select a File to Upload");
       }
-    } catch (err:any) {
+    } catch (err: any) {
       setErrorMessage("Error: Something went wrong");
     }
-  }
+  };
 
-  
-  // Function to upload the selected file
   const handleOpenCamera = async() => {
     setErrorMessage("")
     try{
@@ -84,21 +83,122 @@ const upload = () => {
     }
   }
   
-  const handleUpload = () => {
-    setErrorMessage("")
-    try{
-      if (selectFile || photo){
-        const uploadFile = (selectFile ? selectFile : photo)
-        // handle upload to server
+  const handleUpload = async () => {
+    setErrorMessage("");
+    setIsLoading(true);
+    try {
+      if (selectFile || photo) {
+        const uploadFile = selectFile || photo;
+        if (!uploadFile) return;
+
+        // Get auth token
+        const token = await getAuthToken();
+        if (!token) {
+          throw new Error('Not authenticated');
+        }
+
+        // Create form data
+        const formData = new FormData();
+        
+        // Handle file from DocumentPicker or ImagePicker
+        if (selectFile) {
+          // Check file type
+          const fileType = selectFile.mimeType?.toLowerCase() || '';
+          if (!fileType.includes('image/jpeg') && !fileType.includes('image/png')) {
+            throw new Error('Only JPEG and PNG images are supported');
+          }
+          
+          // Check file size (5MB limit)
+          const fileSize = selectFile.size || 0;
+          if (fileSize > 5 * 1024 * 1024) {
+            throw new Error('File too large (max 5MB)');
+          }
+          
+          // For web platform
+          if (Platform.OS === 'web') {
+            // Get the actual file object from the asset
+            const response = await fetch(selectFile.uri);
+            const blob = await response.blob();
+            formData.append('file', blob, selectFile.name);
+          } else {
+            // For native platforms
+            formData.append('file', {
+              uri: selectFile.uri.replace('file://', ''),
+              type: selectFile.mimeType,
+              name: selectFile.name
+            } as any);
+          }
+          
+        } else if (photo) {
+          // Check file size for photos (5MB limit)
+          const response = await fetch(photo.uri);
+          const blob = await response.blob();
+          if (blob.size > 5 * 1024 * 1024) {
+            throw new Error('File too large (max 5MB)');
+          }
+          
+          // For web platform
+          if (Platform.OS === 'web') {
+            formData.append('file', blob, 'image.jpg');
+          } else {
+            // For native platforms
+            formData.append('file', {
+              uri: photo.uri.replace('file://', ''),
+              type: 'image/jpeg',
+              name: 'image.jpg'
+            } as any);
+          }
+        }
+
+        console.log('Uploading file with formData:', formData);
+
+        // Send to OCR endpoint
+        const response = await fetch('http://localhost:8000/extract-text', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Accept': 'application/json',
+            // Remove Content-Type header to let the browser set it automatically with the correct boundary
+          },
+          body: formData
+        });
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          try {
+            const errorData = JSON.parse(errorText);
+            if (errorData.detail) {
+              throw new Error(errorData.detail);
+            } else {
+              throw new Error(JSON.stringify(errorData));
+            }
+          } catch (e) {
+            throw new Error(errorText || 'Failed to extract text');
+          }
+        }
+
+        const data = await response.json();
+        
+        // Handle the extracted text
+        if (data.text) {
+          // Navigate to translation screen with the extracted text
+          router.push({
+            pathname: '/translate',
+            params: { text: data.text }
+          });
+        } else {
+          setErrorMessage("No text was found in the image");
+        }
+      } else {
+        setErrorMessage("No File Selected, Please select a file or take a photo");
       }
-      else{
-        setErrorMessage("No File Selected, Please select a file or take a photo")
-      }
+    } catch (err: any) {
+      setErrorMessage(`Error: ${err.message || 'Something went wrong'}`);
+    } finally {
+      setIsLoading(false);
     }
-    catch (err:any){
-      setErrorMessage("Error: Something went wrong") 
-    }
-  }
+  };
+
   return (
   <SafeAreaProvider>
     <SafeAreaView style={styles.container}>
