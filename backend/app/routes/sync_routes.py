@@ -3,12 +3,12 @@ from typing import List, Optional
 import datetime
 import asyncio
 import json
-from app.models.sync_model import SyncRequest, SyncResponse, SyncOperation
+from ..models.sync_model import SyncRequest, SyncResponse, SyncOperation
 from ..dependencies import UserInToken, get_current_user
-from app.dependencies import  get_sqlite_storage, get_mongodb_client
+from ..dependencies import  get_sqlite_storage, get_mongodb_client
 from ..database import mongodb_utils as mdb
-from app.utils.logger import logger
-from app.database.mongodb_utils.word_operations import log_word_operation, get_user_word_stats
+from ..utils.logger import logger
+from ..database.mongodb_utils.word_operations import log_word_operation, get_user_word_stats
 
 router = APIRouter(
     prefix="/sync",
