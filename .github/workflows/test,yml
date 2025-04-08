@@ -1,0 +1,30 @@
+name: Run Tests
+on: [push]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with: { python-version: '3.9' }
+    - name: Install dependencies
+      run: |
+        cd backend
+        pip install -r requirements.txt
+    - name: Run tests
+      env:
+        MONGODB_URL: ${{ secrets.MONGODB_URL }}
+        MONGODB_DB_NAME: ${{ secrets.MONGODB_DB_NAME }}
+        SECRET_KEY: ${{ secrets.SECRET_KEY }}
+        ALGORITHM: ${{ secrets.ALGORITHM }}
+        ACCESS_TOKEN_EXPIRE_MINUTES: ${{ secrets.ACCESS_TOKEN_EXPIRE_MINUTES }}
+        SQLITE_DB_PATH: ${{ secrets.SQLITE_DB_PATH }}
+        ENABLE_AUTO_SYNC: ${{ secrets.ENABLE_AUTO_SYNC }}
+        AUTO_SYNC_INTERVAL: ${{ secrets.AUTO_SYNC_INTERVAL }}
+        YOUDAO_APP_KEY: ${{ secrets.YOUDAO_APP_KEY }}
+        YOUDAO_APP_SECRET: ${{ secrets.YOUDAO_APP_SECRET }}
+        GOOGLE_APPLICATION_CREDENTIALS: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS }}
+      run: |
+        cd backend
+        pytest test/test_words.py -v --disable-warnings
