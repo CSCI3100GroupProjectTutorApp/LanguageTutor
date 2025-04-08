@@ -3,6 +3,7 @@
  */
 import { apiClient, setAuthToken, clearAuthToken, APIError } from './client';
 import { API_ENDPOINTS } from './config';
+import { setAuthToken as setAuthTokenService } from '../services/authService';
 
 // Types
 export interface LoginCredentials {
@@ -28,34 +29,37 @@ export interface AuthResponse {
   };
 }
 
+interface LoginResponse {
+  access_token: string;
+  token_type: string;
+}
+
 /**
  * Login user with username and password
  */
-export const login = async (credentials: LoginCredentials): Promise<AuthResponse> => {
+export const login = async ({ username, password }: { username: string; password: string }) => {
   try {
-    // Convert credentials to FormData
-    const formData = new URLSearchParams();
-    formData.append('username', credentials.username);
-    formData.append('password', credentials.password);
+    const response = await fetch('http://localhost:8000/login', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: new URLSearchParams({
+        username,
+        password,
+      }).toString(),
+    });
 
-    const response = await apiClient.post<AuthResponse>(
-      API_ENDPOINTS.LOGIN, 
-      formData.toString(),
-      { 'Content-Type': 'application/x-www-form-urlencoded' }
-    );
-    
-    // Store the token
-    if (response.access_token) {
-      setAuthToken(response.access_token);
-      // Store tokens in localStorage for web
-      if (typeof window !== 'undefined' && window.localStorage) {
-        localStorage.setItem('auth_token', response.access_token);
-        localStorage.setItem('refresh_token', response.refresh_token);
-      }
+    if (!response.ok) {
+      throw new Error(response.status.toString());
     }
-    return response;
+
+    const data: LoginResponse = await response.json();
+    // Store the token in authService
+    setAuthTokenService(data.access_token);
+    return data;
   } catch (error) {
-    console.error('Login failed:', error);
+    console.error('Login error:', error);
     throw error;
   }
 };

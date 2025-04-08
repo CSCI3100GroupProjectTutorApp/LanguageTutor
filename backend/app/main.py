@@ -5,6 +5,8 @@ from fastapi.responses import JSONResponse
 from jose import jwt
 import logging
 import os
+from motor.motor_asyncio import AsyncIOMotorClient
+from contextlib import asynccontextmanager
 
 # MongoDB connections
 from .database.mongodb_connection import connect_to_mongodb, close_mongodb_connection, get_db
@@ -18,6 +20,22 @@ from .dependencies import get_sqlite_storage, get_mongo_client
 from .routes import auth_routes, user_routes, utility_routes, sync_routes, word_routes, ocr_routes, translation_routes
 from .config import settings
 from .auth.token_blacklist import is_blacklisted
+
+
+# lifespan manager for mongoDB
+MONGODB_URL = "mongodb+srv://CSCI3100:NklOk7GZqV3M2tGi@csci3100-project.tloff.mongodb.net/?retryWrites=true&w=majority&appName=CSCI3100-Project"
+DB_NAME = "languageTutor"
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup: Initialize the MongoDB client
+    app.state.mongodb_client = AsyncIOMotorClient(MONGODB_URL)
+    app.state.db = app.state.mongodb_client[DB_NAME]
+    print("MongoDB client initialized")
+    yield
+    # Shutdown: Close the client
+    app.state.mongodb_client.close()
+    print("MongoDB client closed")
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
