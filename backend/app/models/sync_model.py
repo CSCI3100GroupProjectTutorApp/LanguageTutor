@@ -19,7 +19,7 @@ class SyncRequest(BaseModel):
 class SyncResponse(BaseModel):
     sync_timestamp: str
     new_server_operations: List[SyncOperation] = []
-    success: bool = True  # Added with default
-    message: str = "Sync completed successfully"  # Added with default
-    processed_operations: int = 0  # Added with default
-    failed_operations: int = 0  # Added with default
+    success: bool = True 
+    message: str = "Sync completed successfully"  
+    processed_operations: int = 0 
+    failed_operations: int = 0  
