@@ -112,7 +112,7 @@ def test_get_words():
     
     # Get all words
     response = requests.get(
-        f"{BASE_URL}/words/",
+        f"{BASE_URL}/words/all",
         headers=headers
     )
     
@@ -123,7 +123,7 @@ def test_get_words():
     assert len(words) > 0
     
     print(f"✓ Retrieved {len(words)} words successfully")
-'''
+
 def test_get_word_by_id():
     """Test retrieving a word by ID"""
     token = get_auth_token()
@@ -373,14 +373,13 @@ def test_get_all_words():
         assert "part_of_speech" in word
     
     print(f"✓ Retrieved all {len(words)} words successfully")
-'''
+
 def run_all_tests():
     """Run all tests sequentially"""
     print("\n=== Running Word API Tests ===\n")
     
     try:
         test_create_word()
-        '''
         test_get_words()
         test_get_word_by_id()
         test_update_word()
@@ -388,7 +387,6 @@ def run_all_tests():
         test_search_words()
         test_get_word_by_text()
         test_get_all_words()
-        '''
         print("\n✅ All tests passed!\n")
     except AssertionError as e:
         print(f"\n❌ Test failed: {e}\n")

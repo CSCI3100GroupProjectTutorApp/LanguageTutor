@@ -1,1 +1,2 @@
 2025-04-09 16:15:13,256 - tutor_app - ERROR - word_routes:151 - Error retrieving words: 'WordStorage' object has no attribute 'get_all_words'
+2025-04-09 16:25:50,819 - tutor_app - ERROR - word_routes:119 - Error getting all words: 'WordStorage' object has no attribute 'get_all_words'

@@ -77,95 +77,6 @@ async def create_word(
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to create word: {str(e)}")
 
-@router.get("/{word_id}", response_model=Word)
-async def get_word(
-    word_id: int,
-    storage=Depends(get_sqlite_storage)
-):
-    """Get a specific word by ID."""
-    try:
-        word = await storage.find_word(wordid=word_id)
-        if not word:
-            raise HTTPException(status_code=404, detail="Word not found")
-        return word
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to retrieve word: {str(e)}")
-
-@router.put("/{word_id}", response_model=Word)
-async def update_word(
-    word_id: int,
-    word_data: WordUpdate,
-    storage=Depends(get_sqlite_storage)
-):
-    """Update a word (stored locally and synced when online)."""
-    try:
-        # Convert model to dict and remove None values
-        update_data = {k: v for k, v in word_data.dict().items() if v is not None}
-        
-        if not update_data:
-            raise HTTPException(status_code=400, detail="No valid fields to update")
-        
-        # Update the word
-        success = await storage.update_word(word_id, update_data)
-        if not success:
-            raise HTTPException(status_code=404, detail="Word not found or update failed")
-        
-        # Get the updated word
-        updated_word = await storage.find_word(wordid=word_id)
-        return updated_word
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to update word: {str(e)}")
-
-@router.delete("/{word_id}", status_code=204)
-async def delete_word(
-    word_id: int,
-    storage=Depends(get_sqlite_storage)
-):
-    """Delete a word (stored locally and synced when online)."""
-    try:
-        success = await storage.delete_word(wordid=word_id)
-        if not success:
-            raise HTTPException(status_code=404, detail="Word not found")
-        return None
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to delete word: {str(e)}")
-
-@router.get("/search/{query}", response_model=List[Word])
-async def search_words(
-    query: str,
-    storage=Depends(get_sqlite_storage)
-):
-    """Search for words by partial match."""
-    try:
-        words = await storage.find_word(word=query, partial_match=True)
-        return words
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to search words: {str(e)}")
-
-@router.get("/by-word/{exact_word}", response_model=Word)
-async def get_word_by_text(
-    exact_word: str,
-    storage=Depends(get_sqlite_storage)
-):
-    """Get a word by exact text match."""
-    try:
-        word = await storage.find_word(word=exact_word)
-        if not word:
-            raise HTTPException(status_code=404, detail="Word not found")
-        return word
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to retrieve word: {str(e)}")
-    
-
-
 @router.get("/all", response_model=List[WordResponse])
 async def get_all_words(
     current_user: UserInToken = Depends(get_current_user),
@@ -207,3 +118,118 @@ async def get_all_words(
     except Exception as e:
         logger.error(f"Error getting all words: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Error getting words: {str(e)}")
+    
+@router.get("/{word_id}", response_model=Word)
+async def get_word(
+    word_id: int,
+    storage=Depends(get_sqlite_storage)
+):
+    """Get a specific word by ID."""
+    try:
+        word = await storage.find_word(wordid=word_id)
+        if not word:
+            raise HTTPException(status_code=404, detail="Word not found")
+        return word
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to retrieve word: {str(e)}")
+
+@router.put("/{word_id}", response_model=Word)
+async def update_word(
+    word_id: int,
+    word_data: WordUpdate,
+    current_user: UserInToken = Depends(get_current_user),
+    storage = Depends(get_sqlite_storage),
+    mongo_client = Depends(get_mongo_client)
+):
+    """Update a word (stored locally and synced when online)."""
+    try:
+        # Get user ID from MongoDB
+        user_doc = await mdb.get_user(mongo_client, username=current_user.username)
+        if not user_doc:
+            raise HTTPException(status_code=404, detail="User not found in database")
+            
+        # Extract user ID (handle both _id and userid fields)
+        if "userid" in user_doc:
+            user_id = str(user_doc["userid"])
+        else:
+            user_id = str(user_doc["_id"])
+
+        # Convert model to dict and remove None values
+        update_data = {k: v for k, v in word_data.dict().items() if v is not None}
+        
+        if not update_data:
+            raise HTTPException(status_code=400, detail="No valid fields to update")
+        
+        # Update the word
+        success = await storage.update_word(word_id, update_data, user_id)
+        if not success:
+            raise HTTPException(status_code=404, detail="Word not found or update failed")
+        
+        # Get the updated word
+        updated_word = await storage.find_word(wordid=word_id)
+        return updated_word
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to update word: {str(e)}")
+
+@router.delete("/{word_id}", status_code=204)
+async def delete_word(
+    word_id: int,
+    current_user: UserInToken = Depends(get_current_user),
+    storage = Depends(get_sqlite_storage),
+    mongo_client = Depends(get_mongo_client)
+):
+    """Delete a word (stored locally and synced when online)."""
+    try:
+        # Get user ID from MongoDB
+        user_doc = await mdb.get_user(mongo_client, username=current_user.username)
+        if not user_doc:
+            raise HTTPException(status_code=404, detail="User not found in database")
+            
+        # Extract user ID (handle both _id and userid fields)
+        if "userid" in user_doc:
+            user_id = str(user_doc["userid"])
+        else:
+            user_id = str(user_doc["_id"])
+
+        success = await storage.delete_word(user_id, wordid=word_id)
+        if not success:
+            raise HTTPException(status_code=404, detail="Word not found")
+        return None
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to delete word: {str(e)}")
+
+@router.get("/search/{query}", response_model=List[Word])
+async def search_words(
+    query: str,
+    storage=Depends(get_sqlite_storage)
+):
+    """Search for words by partial match."""
+    try:
+        words = await storage.find_word(word=query, partial_match=True)
+        return words
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to search words: {str(e)}")
+
+@router.get("/by-word/{exact_word}", response_model=Word)
+async def get_word_by_text(
+    exact_word: str,
+    storage=Depends(get_sqlite_storage)
+):
+    """Get a word by exact text match."""
+    try:
+        word = await storage.find_word(word=exact_word)
+        if not word:
+            raise HTTPException(status_code=404, detail="Word not found")
+        return word
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to retrieve word: {str(e)}")
+    
+

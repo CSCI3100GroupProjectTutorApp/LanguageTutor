@@ -279,6 +279,39 @@ class WordStorage:
                 print(f"Error finding word:", e)
                 raise e
             
+    async def get_all_words(self, user_id: Optional[str] = None) -> List[Dict[str, Any]]:
+        """
+        Retrieve all words from the local database for a specific user.
+
+        Args:
+            user_id: (Optional) User ID to filter words. If None, retrieves all words.
+
+        Returns:
+            List of dictionaries representing words.
+        """
+        async with aiosqlite.connect(self.db_path) as conn:
+            conn.row_factory = aiosqlite.Row  # Enable column access by name
+            try:
+                # Query to retrieve all words
+                if user_id:
+                    cursor = await conn.execute("SELECT * FROM words WHERE wordid IN (SELECT wordid FROM sync_queue WHERE user_id = ?)", (user_id,))
+                else:
+                    cursor = await conn.execute("SELECT * FROM words")
+                
+                rows = await cursor.fetchall()
+                words = []
+
+                for row in rows:
+                    word_data = dict(row)
+                    # Convert part_of_speech JSON string back to a list
+                    word_data['part_of_speech'] = json.loads(word_data['part_of_speech'])
+                    words.append(word_data)
+
+                return words
+            except Exception as e:
+                print(f"Error retrieving all words:", e)
+                raise e
+                
     async def update_word(self, wordid, update_data, user_id) -> bool:
         """
         Update word information locally
@@ -357,77 +390,71 @@ class WordStorage:
                 print(f"Error updating word:", e)
                 raise e
         
-    async def delete_word(self, word=None, wordid=None, user_id=None) -> bool:
+    async def delete_word(self, user_id, word=None, wordid=None) -> bool:
         """
-        Delete a word by word or wordid
-        
+        Delete a word by word or wordid.
+
         Args:
-            word: (Optional) Word to delete
-            wordid: (Optional) Word ID to delete
-            user_id: User ID performing the deletion
-            
+            word: (Optional) Word to delete.
+            wordid: (Optional) Word ID to delete.
+            user_id: User ID performing the deletion.
+
         Returns:
-            Boolean indicating if the word was deleted
+            Boolean indicating if the word was deleted.
         """
         async with aiosqlite.connect(self.db_path) as conn:
             try:
                 # Start a transaction
                 await conn.execute("BEGIN TRANSACTION")
-                
-                cursor = None
-                word_info = None
-                
+
                 # Find the word info before deleting
                 if wordid is not None:
                     cursor = await conn.execute("SELECT word FROM words WHERE wordid = ?", (wordid,))
                     word_info = await cursor.fetchone()
-                    query = "DELETE FROM words WHERE wordid = ?"
-                    params = (wordid,)
+                    if not word_info:
+                        print(f"No word found with ID {wordid}")
+                        await conn.rollback()
+                        return False
+                    word = word_info[0]
                 elif word is not None:
                     cursor = await conn.execute("SELECT wordid FROM words WHERE word = ?", (word,))
-                    word_row = await cursor.fetchone()
-                    if word_row:
-                        wordid = word_row[0]
-                    word_info = word
-                    query = "DELETE FROM words WHERE word = ?"
-                    params = (word,)
+                    word_info = await cursor.fetchone()
+                    if not word_info:
+                        print(f"No word found with name '{word}'")
+                        await conn.rollback()
+                        return False
+                    wordid = word_info[0]
                 else:
                     print("Either word or wordid must be provided")
                     await conn.rollback()
                     return False
-                
-                if not word_info:
-                    print(f"No word found to delete")
-                    await conn.rollback()
-                    return False
-                    
-                # Delete the word
-                cursor = await conn.execute(query, params)
-                
-                # Check if any row was affected
-                if cursor.rowcount > 0:
-                    # Add to sync queue in the same transaction
-                    timestamp = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-                    actual_word = word if word else word_info[0]
-                    
-                    await conn.execute(
-                        """
-                        INSERT INTO sync_queue 
-                        (operation, user_id, wordid, word, result, context, data, timestamp) 
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-                        """,
-                        ("delete", user_id, wordid, actual_word, None, None, None, timestamp)
-                    )
-                    
-                    # Commit the entire transaction
-                    await conn.commit()
-                    print(f"Word successfully deleted locally")
-                    return True
-                else:
-                    print(f"No word found to delete")
-                    await conn.rollback()
-                    return False
+
+                # Delete the word from the words table
+                await conn.execute("DELETE FROM words WHERE wordid = ?", (wordid,))
+
+                # Add to sync queue in the same transaction
+                timestamp = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                data = {
+                    "wordid": wordid,
+                    "word": word,
+                    "operation": "delete",
+                    "timestamp": timestamp
+                }
+                await conn.execute(
+                    """
+                    INSERT INTO sync_queue 
+                    (operation, user_id, wordid, word, result, context, data, timestamp) 
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                    """,
+                    ("delete", user_id, wordid, word, None, None, json.dumps(data), timestamp)
+                )
+
+                # Commit the entire transaction
+                await conn.commit()
+                print(f"Word '{word}' with ID {wordid} successfully deleted locally")
+                return True
             except Exception as e:
+                # Roll back the entire transaction if there's an error
                 await conn.rollback()
                 print(f"Error deleting word:", e)
                 raise e
