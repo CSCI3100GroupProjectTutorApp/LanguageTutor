@@ -34,9 +34,11 @@ class UserInToken(BaseModel):
     username: str
     email: Optional[str] = None
     is_active: Optional[bool] = True
+    user_id: str  # Added user_id field
 
 # Setup OAuth2 password bearer with token URL
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
+
 
 async def get_current_user(token: str = Depends(oauth2_scheme)):
     """
@@ -46,7 +48,7 @@ async def get_current_user(token: str = Depends(oauth2_scheme)):
         token: JWT token from OAuth2PasswordBearer
         
     Returns:
-        UserInToken: User object with username and other fields
+        UserInToken: User object with username, user_id, and other fields
         
     Raises:
         HTTPException: If token is invalid or user doesn't exist
@@ -92,11 +94,20 @@ async def get_current_user(token: str = Depends(oauth2_scheme)):
                 detail="Inactive user account"
             )
         
+        # Extract user_id from the user document
+        user_id = user_doc.get("userid")
+        if user_id is None:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="User ID not found in database"
+            )
+        
         # Create and return a UserInToken object
         user = UserInToken(
             username=username,
             email=user_doc.get("email"),
-            is_active=user_doc.get("is_active", True)
+            is_active=user_doc.get("is_active", True),
+            user_id=user_id  # Include user_id
         )
         
         return user

@@ -54,15 +54,18 @@ class WordResponse(BaseModel):
 @router.post("/", response_model=Word, status_code=201)
 async def create_word(
     word_data: WordCreate,
+    current_user: UserInToken = Depends(get_current_user),  # Get the authenticated user
     storage=Depends(get_sqlite_storage)
 ):
     """Add a new word to the database (stored locally and synced when online)."""
+    
     try:
         wordid = await storage.add_word(
             word=word_data.word,
             en_meaning=word_data.en_meaning,
             ch_meaning=word_data.ch_meaning,
-            part_of_speech=word_data.part_of_speech
+            part_of_speech=word_data.part_of_speech,
+            user_id= current_user.user_id
         )
         
         # Retrieve the created word
@@ -73,17 +76,6 @@ async def create_word(
         return created_word
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to create word: {str(e)}")
-
-@router.get("/", response_model=List[Word])
-async def get_words(
-    storage=Depends(get_sqlite_storage)
-):
-    """Get all words from local database."""
-    try:
-        words = await storage.find_word()
-        return words
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to retrieve words: {str(e)}")
 
 @router.get("/{word_id}", response_model=Word)
 async def get_word(

@@ -58,3 +58,9 @@ class TokenData(BaseModel):
 
 class RefreshToken(BaseModel):
     refresh_token: str
+
+class UserInToken(BaseModel):
+    username: str
+    email: Optional[str] = None
+    is_active: Optional[bool] = True
+    user_id: str  # Added user_id field
