@@ -2,12 +2,9 @@
 
 Admin user information (use this account to generate new token or run protected function()):
 
-username: admin
-
-password: admin
-
-userid: 0
-
+username: admin <br/>
+password: admin  <br/>
+userid: 0  <br/>
 ## Features
 
 - User authentication and management
