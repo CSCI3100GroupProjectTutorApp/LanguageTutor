@@ -5,6 +5,8 @@ Admin user information (use this account to generate new token or run protected 
 username: admin <br/>
 password: admin  <br/>
 userid: 0  <br/>
+
+You can add new admin user using create_admin.py under scripts
 ## Features
 
 - User authentication and management
