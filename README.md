@@ -1,7 +1,9 @@
 # Language Tutoring API
 
-This branch is used for testing the authorization function e.g. register, login. I didn't merge it cause the ai change front end code 
-and I am afraid that it affects the design.
+Admin user information (use this account to generate new token or run protected function()):
+username: admin
+password: admin
+userid: 0
 
 ## Features
 
