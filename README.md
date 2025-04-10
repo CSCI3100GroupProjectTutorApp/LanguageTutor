@@ -1,8 +1,11 @@
 # Language Tutoring API
 
 Admin user information (use this account to generate new token or run protected function()):
+
 username: admin
+
 password: admin
+
 userid: 0
 
 ## Features
