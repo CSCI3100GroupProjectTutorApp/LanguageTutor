@@ -55,6 +55,8 @@ class UserResponse(BaseModel):
     has_valid_license: bool = False
     license_key: Optional[str] = None
     is_admin: bool
+    created_at: Optional[datetime] = None
+    last_login: Optional[datetime] = None
 
 class Token(BaseModel):
     access_token: str
