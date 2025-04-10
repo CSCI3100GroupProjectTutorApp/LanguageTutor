@@ -4,6 +4,7 @@ from datetime import datetime
 from datetime import timezone
 from bson import ObjectId
 from ..utils.timezone_utils import get_hk_time, HK_TIMEZONE
+from typing import Optional
 
 class UserBase(BaseModel):
     username: str
@@ -14,6 +15,7 @@ class UserCreate(UserBase):
     username: str = Field(..., description="Unique username, 3-20 characters")
     email: EmailStr = Field(..., description="Valid email address")
     password: str = Field(..., description="Password, minimum 8 characters")
+    license_key: Optional[str] = None # Optional for now, can be activated later
 
 class UserLogin(BaseModel):
     username: str
@@ -23,8 +25,11 @@ class UserInDB(UserBase):
     user_id: Optional[str] = None
     hashed_password: str
     is_active: bool = True
+    is_admin: bool = False
     created_at: datetime = Field(default_factory=get_hk_time)
     last_login: Optional[datetime] = None
+    has_valid_license: bool = False
+    license_key: Optional[str] = None
     
     class Config:
         # Allow population by field name or alias
@@ -42,11 +47,14 @@ class UserInDB(UserBase):
             return str(v)
         return v
 
-class UserResponse(UserBase):
+class UserResponse(BaseModel):
     user_id: str
+    username: str
+    email: str
     is_active: bool
-    created_at: datetime
-    last_login: Optional[datetime] = None
+    has_valid_license: bool = False
+    license_key: Optional[str] = None
+    is_admin: bool
 
 class Token(BaseModel):
     access_token: str

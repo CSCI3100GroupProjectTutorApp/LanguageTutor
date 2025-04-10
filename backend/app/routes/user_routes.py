@@ -42,7 +42,9 @@ async def get_user_profile(current_user = Depends(get_current_user)):
             email=current_user.email,
             is_active=current_user.is_active,
             created_at=current_user.created_at,
-            last_login=current_user.last_login
+            last_login=current_user.last_login,
+            is_admin=current_user.is_admin,
+            has_valid_license = current_user.has_valid_license
         )
     except Exception as e:
         print(f"Error in get_user_profile: {str(e)}")
@@ -50,3 +52,17 @@ async def get_user_profile(current_user = Depends(get_current_user)):
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error retrieving user profile: {str(e)}"
         )
+
+    @router.get("/protected-data")
+    async def get_protected_data(
+        current_user = Depends(get_current_user),
+        _: bool = Depends(verify_license),  # This ensures user has a valid license
+        db = Depends(get_db)
+    ):
+        """Access protected data (requires a valid license)"""
+        return {
+            "message": "You have access to protected data",
+            "data": {
+                "sample": "This is protected data that requires a valid license"
+            }
+        }

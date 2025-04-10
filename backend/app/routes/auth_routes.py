@@ -41,13 +41,49 @@ async def register_user(user_data: UserCreate):
         hashed_password = get_password_hash(user_data.password)
         time_now = get_hk_time()
 
+        # Set default license values
+        has_valid_license = False
+        license_key = None
+        
+        # If license key was provided, validate it first
+        if hasattr(user_data, 'license_key') and user_data.license_key:
+            # Check if license exists and is valid (not used or revoked)
+            license_doc = await client.async_db.licenses.find_one({
+                "license_key": user_data.license_key
+            })
+            
+            if not license_doc:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Invalid license key"
+                )
+                
+            if license_doc.get("status") == "revoked":
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="License key has been revoked"
+                )
+                
+            if license_doc.get("user_id") and license_doc.get("status") == "used":
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="License key already in use"
+                )
+                
+            # Valid license found, will be activated after user creation
+            license_key = user_data.license_key
+
         user_obj = {
             "username": user_data.username,
             "email": user_data.email,
             "hashed_password": hashed_password,
             "is_active": True,
+            "is_admin": False,
             "created_at": time_now,
-            "last_login": None
+            "last_login": None,
+            "refresh_token": False,
+            "has_valid_license": has_valid_license,
+            "license_key": license_key
         }
         
         # Add user to database
@@ -55,6 +91,39 @@ async def register_user(user_data: UserCreate):
         
         # Add the user_id to the response object
         user_obj["user_id"] = str(userid)
+        
+        # If license key was provided, activate it for this user
+        if license_key:
+            print(f"Activating license key: {license_key} for user: {userid}")
+            # Update license record to mark as used by this user
+            await client.async_db.licenses.update_one(
+                {"license_key": license_key},
+                {
+                    "$set": {
+                        "user_id": str(userid),
+                        "status": "used",
+                        "activated_at": time_now
+                    }
+                }
+            )
+            
+            from bson import ObjectId
+            result = await client.async_db.users.update_one(
+                {"_id": ObjectId(userid)},
+                {
+                    "$set": {
+                        "has_valid_license": True,
+                        "license_key": license_key
+                    }
+                }
+            )
+            print(f"User update result: {result.modified_count} document(s) updated")
+                        
+            # Update the response object
+            user_obj["has_valid_license"] = True
+            
+            # Log license activation event
+            await mdb.add_event(client, userid, "license_activation", time_now)
 
         # Add registration event to usage logs
         await mdb.add_event(client, userid, "register", time_now)

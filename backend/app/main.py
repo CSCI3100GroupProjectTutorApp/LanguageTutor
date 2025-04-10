@@ -17,7 +17,7 @@ from .database.sqlite.sqlite_storage import WordStorage
 from .dependencies import get_sqlite_storage, get_mongo_client
 
 # Routes
-from .routes import auth_routes, user_routes, utility_routes, sync_routes, word_routes, ocr_routes, translation_routes
+from .routes import auth_routes, user_routes, utility_routes, sync_routes, word_routes, ocr_routes, translation_routes, license_routes
 from .config import settings
 from .auth.token_blacklist import is_blacklisted
 
@@ -113,6 +113,7 @@ app.include_router(word_routes.router)
 app.include_router(sync_routes.router)
 app.include_router(ocr_routes.router)
 app.include_router(translation_routes.router)
+app.include_router(license_routes.router)
 
 @app.get("/")
 async def root():
