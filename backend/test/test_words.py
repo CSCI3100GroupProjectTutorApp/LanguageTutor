@@ -4,6 +4,9 @@ import os
 import uuid
 import requests
 from datetime import datetime
+from unittest.mock import patch
+from fastapi.testclient import TestClient
+from app.main import app
 
 # Add the parent directory to the Python path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -373,6 +376,33 @@ def test_get_all_words():
         assert "part_of_speech" in word
     
     print(f"✓ Retrieved all {len(words)} words successfully")
+    
+def test_create_word_with_youdao_translation_mocked():
+    client = TestClient(app)
+    token = get_auth_token()
+    headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
+
+    # Delete the word "welcome" if it exists
+    response = client.get("/words/by-word/welcome", headers=headers)
+    if response.status_code == 200:
+        word_id = response.json()["wordid"]
+        client.delete(f"/words/{word_id}", headers=headers)
+
+    with patch("requests.get") as mock_get:
+        mock_response = {"errorCode": "0", "translation": ["欢迎"], "l": "en2zh-CHS"}
+        mock_get.return_value.json.return_value = mock_response
+        mock_get.return_value.status_code = 200
+
+        word_data = {
+            "word": "welcome",
+            "en_meaning": "to greet someone",
+            "ch_meaning": "",
+            "part_of_speech": ["verb"]
+        }
+        response = client.post("/words/", headers=headers, json=word_data)
+        assert response.status_code == 201
+        created_word = response.json()
+        assert created_word["ch_meaning"] == "欢迎"
 
 def run_all_tests():
     """Run all tests sequentially"""
@@ -387,6 +417,7 @@ def run_all_tests():
         test_search_words()
         test_get_word_by_text()
         test_get_all_words()
+        test_create_word_with_youdao_translation()
         print("\n✅ All tests passed!\n")
     except AssertionError as e:
         print(f"\n❌ Test failed: {e}\n")
