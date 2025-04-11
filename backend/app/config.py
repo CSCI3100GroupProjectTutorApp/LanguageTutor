@@ -1,5 +1,6 @@
 from pydantic_settings import BaseSettings, SettingsConfigDict
 import os
+from typing import Optional
 
 class Settings(BaseSettings):
     # MongoDB
@@ -23,6 +24,14 @@ class Settings(BaseSettings):
     # Google Cloud Vision API credentials
     GOOGLE_APPLICATION_CREDENTIALS: str = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
 
+    # Email settings
+    SMTP_SERVER: str = os.getenv("SMTP_SERVER", "smtp.gmail.com")
+    SMTP_PORT: int = int(os.getenv("SMTP_PORT", "587"))
+    EMAIL_SENDER: Optional[str] = os.getenv("EMAIL_SENDER")
+    EMAIL_USERNAME: Optional[str] = os.getenv("EMAIL_USERNAME")
+    EMAIL_PASSWORD: Optional[str] = os.getenv("EMAIL_PASSWORD")
+    EMAIL_USE_TLS: bool = os.getenv("EMAIL_USE_TLS", "true").lower() == "true"
+    
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8"
