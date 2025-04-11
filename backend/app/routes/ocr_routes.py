@@ -17,10 +17,10 @@ logger = logging.getLogger(__name__)
 # Initialize Google Cloud Vision client
 try:
     # Check if we have credentials as environment variable
-    if os.environ.get("GOOGLE_APPLICATION_CREDENTIALS_JSON"):
+    if os.environ.get("GOOGLE_APPLICATION_CREDENTIALS"):
         # Parse credentials from environment variable
         import json
-        credentials_info = json.loads(os.environ.get("GOOGLE_APPLICATION_CREDENTIALS_JSON"))
+        credentials_info = json.loads(os.environ.get("GOOGLE_APPLICATION_CREDENTIALS"))
         credentials = service_account.Credentials.from_service_account_info(credentials_info)
         vision_client = vision.ImageAnnotatorClient(credentials=credentials)
         logger.info("Initialized Vision API client with credentials from environment variable JSON")

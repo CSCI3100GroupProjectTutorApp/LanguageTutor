@@ -165,13 +165,26 @@ async def request_license_key(
         username = user_doc.get("username")
         email_result = await send_license_key_email(email, license_key, username)
         
-        if not email_result["success"]:
-            print(f"Email sending failed: {email_result['message']}")
+        # Handle either boolean or dictionary return type
+        email_success = False
+        email_message = ""
+        
+        if isinstance(email_result, bool):
+            # Handle boolean return
+            email_success = email_result
+            email_message = "Email sending failed" if not email_success else "Email sent successfully"
+        elif isinstance(email_result, dict):
+            # Handle dictionary return
+            email_success = email_result.get("success", False)
+            email_message = email_result.get("message", "")
+        
+        if not email_success:
+            print(f"Email sending failed: {email_message}")
             # For testing, always return success with the license key
             return {
                 "success": True,
                 "license_key": license_key,
-                "message": f"License key generated, but email could not be sent: {email_result['message']}"
+                "message": f"License key generated, but email could not be sent: {email_message}"
             }
         
         return {
