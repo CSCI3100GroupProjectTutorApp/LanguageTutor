@@ -1,18 +1,23 @@
-import {View, StyleSheet, Text, StatusBar, TouchableOpacity, Platform, ActivityIndicator, Alert, Linking} from 'react-native';
+
+import {View, StyleSheet, Text, StatusBar, TouchableOpacity,Platform, ActivityIndicator, Alert, Linking, ScrollView, Pressable} from 'react-native';
 import {SafeAreaView, SafeAreaProvider} from 'react-native-safe-area-context';
 import React, {useState} from 'react';
 import { AntDesign, Ionicons } from "@expo/vector-icons";
 import * as DocumentPicker from 'expo-document-picker';
 import * as ImagePicker from "expo-image-picker";
+import * as FileSystem from 'expo-file-system';
+import { getAuthToken } from '../../services/authService'
+import mammoth from "mammoth";
 import { useRouter } from 'expo-router';
-import { getAuthToken } from '../../services/authService';
 
 const upload = () => {
-  const [selectFile, setSelectFile] = useState<DocumentPicker.DocumentPickerAsset | null>(null);
-  const [photo, setPhoto] = useState<ImagePicker.ImagePickerAsset | null>(null);
+  
+  const [selectFile, setSelectFile] = useState<DocumentPicker.DocumentPickerAsset| null>(null)
+  const [photo, setPhoto] = useState<ImagePicker.ImagePickerAsset| null>(null)
   const [errorMessage, setErrorMessage] = useState(""); 
   const [isLoading, setIsLoading] = useState(false);
-  const router = useRouter();
+  const [extractedText, setExtractedText] = useState("")
+  const router = useRouter ()
 
   const handleSelectFile = async () => {
     setErrorMessage("")
@@ -25,21 +30,29 @@ const upload = () => {
                 "text/plain"
         ],
         copyToCacheDirectory: true,
-        multiple: false
-      });
+        multiple:false
+      })
 
       if (!result.canceled) {
-        const successResult = result as DocumentPicker.DocumentPickerSuccessResult;
-        setSelectFile(successResult.assets[0]);
-        setPhoto(null);
+        const successResult = result as DocumentPicker.DocumentPickerSuccessResult
+        const fileSize = successResult.assets[0].size || 0
+        if (fileSize > 5 * 1024 * 1024){
+          setErrorMessage("File too large (max 5MB)")
+        }
+        else{
+          setSelectFile(successResult.assets[0])
+          setPhoto(null)
+        }
       } else {
-        Alert.alert("No file selected", "Select a File to Upload");
+        Alert.alert("No file selected","Select a File to Upload");
       }
-    } catch (err: any) {
+    } catch (err:any) {
       setErrorMessage("Error: Something went wrong");
     }
-  };
+  }
 
+  
+  // Function to upload the selected file
   const handleOpenCamera = async() => {
     setErrorMessage("")
     try{
@@ -78,69 +91,39 @@ const upload = () => {
     });
 
     if (!result.canceled) {
-      setPhoto(result.assets[0]);
-      setSelectFile(null);
+      const fileSize = result.assets[0].fileSize || 0
+      if (fileSize > 5 * 1024 * 1024){
+        setErrorMessage("File too large (max 5MB)")
+      }
+      else{
+        setPhoto(result.assets[0]);
+        setSelectFile(null);
+      }
+      
     }
   }
   
-  const handleUpload = async () => {
-    setErrorMessage("");
-    setIsLoading(true);
-    try {
-      if (selectFile || photo) {
-        const uploadFile = selectFile || photo;
-        if (!uploadFile) return;
-
-        // Get auth token
-        const token = await getAuthToken();
+  const handleUpload = async() => {
+    setErrorMessage("")
+    setIsLoading(true)
+    try{
+      
+      const token = await getAuthToken();
         if (!token) {
           throw new Error('Not authenticated');
         }
-
-        // Create form data
-        const formData = new FormData();
-        
-        // Handle file from DocumentPicker or ImagePicker
-        if (selectFile) {
-          // Check file type
-          const fileType = selectFile.mimeType?.toLowerCase() || '';
-          if (!fileType.includes('image/jpeg') && !fileType.includes('image/png')) {
-            throw new Error('Only JPEG and PNG images are supported');
-          }
-          
-          // Check file size (5MB limit)
-          const fileSize = selectFile.size || 0;
-          if (fileSize > 5 * 1024 * 1024) {
-            throw new Error('File too large (max 5MB)');
-          }
-          
-          // For web platform
-          if (Platform.OS === 'web') {
-            // Get the actual file object from the asset
-            const response = await fetch(selectFile.uri);
-            const blob = await response.blob();
-            formData.append('file', blob, selectFile.name);
-          } else {
-            // For native platforms
-            formData.append('file', {
-              uri: selectFile.uri.replace('file://', ''),
-              type: selectFile.mimeType,
-              name: selectFile.name
-            } as any);
-          }
-          
-        } else if (photo) {
-          // Check file size for photos (5MB limit)
-          const response = await fetch(photo.uri);
-          const blob = await response.blob();
-          if (blob.size > 5 * 1024 * 1024) {
-            throw new Error('File too large (max 5MB)');
-          }
-          
-          // For web platform
+         
+      const formData = new FormData()
+      
+      if (photo || selectFile){
+        // Case: Photo taken to upload -> call OCR
+        if(photo){
+          const response = await fetch(photo.uri)
+          const blob = await response.blob()
           if (Platform.OS === 'web') {
             formData.append('file', blob, 'image.jpg');
-          } else {
+          } 
+          else {
             // For native platforms
             formData.append('file', {
               uri: photo.uri.replace('file://', ''),
@@ -148,56 +131,134 @@ const upload = () => {
               name: 'image.jpg'
             } as any);
           }
+          const data = await handleOCR(formData,token)
+          setExtractedText(data.text)
+          const text = encodeURIComponent(data.text)
+          router.navigate(`../translate/${text}`)
         }
-
-        console.log('Uploading file with formData:', formData);
-
-        // Send to OCR endpoint
-        const response = await fetch('http://localhost:8000/extract-text', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Accept': 'application/json',
-            // Remove Content-Type header to let the browser set it automatically with the correct boundary
-          },
-          body: formData
-        });
-
-        if (!response.ok) {
-          const errorText = await response.text();
-          try {
-            const errorData = JSON.parse(errorText);
-            if (errorData.detail) {
-              throw new Error(errorData.detail);
-            } else {
-              throw new Error(JSON.stringify(errorData));
+        // Case: File selected to upload
+        if(selectFile){
+          const fileType = selectFile.mimeType?.toLowerCase() || '';
+          // Case: File is not image
+          if (!fileType.includes('image/jpeg') && !fileType.includes('image/png')) {
+            const fileName = selectFile.name.split("/").pop();
+            const newPath = `${FileSystem.documentDirectory}${fileName}`
+            await FileSystem.copyAsync({
+              from: selectFile.uri,
+              to: newPath,
+            })
+            
+            if(fileType.includes('application/pdf')){
+              // OCR for pdf
             }
-          } catch (e) {
-            throw new Error(errorText || 'Failed to extract text');
+            else if(fileType.includes('application/msword') || fileType.includes('application/vnd.openxmlformats-officedocument.wordprocessingml.document')){
+              const data = await FileSystem.readAsStringAsync(newPath,{
+                encoding: FileSystem.EncodingType.Base64,
+              })
+              const { value } = await mammoth.extractRawText({
+                arrayBuffer: base64ToArrayBuffer(data),
+              })
+
+              setExtractedText(value);
+              const text = encodeURIComponent(value.replace(/%/g,'~~~pct~~~'))
+              router.navigate(`../translate/${text}`)
+            }
+            else if(fileType.includes('text/plain')){
+              const data = await FileSystem.readAsStringAsync(newPath)
+              setExtractedText(data)
+              const text = encodeURIComponent(data)
+              router.navigate(`../translate/${text}`)
+
+            } 
+          }
+          // Case: File is image -> call OCR
+          else{
+            if (Platform.OS === 'web') {
+              // Get the actual file object from the asset
+              const response = await fetch(selectFile.uri);
+              const blob = await response.blob();
+              formData.append('file', blob, selectFile.name);
+            } 
+            else{
+              // For native platforms
+              formData.append('file', {
+                uri: selectFile.uri.replace('file://', ''),
+                type: selectFile.mimeType,
+                name: selectFile.name
+              } as any);
+            }
+            
+            const data = await handleOCR(formData,token)
+            setExtractedText(data.text)
+            const text = encodeURIComponent(data.text)
+            router.navigate(`../translate/${text}`)
           }
         }
-
-        const data = await response.json();
-        
-        // Handle the extracted text
-        if (data.text) {
-          // Navigate to translation screen with the extracted text
-          router.push({
-            pathname: '/translate',
-            params: { text: data.text }
-          });
-        } else {
-          setErrorMessage("No text was found in the image");
-        }
-      } else {
-        setErrorMessage("No File Selected, Please select a file or take a photo");
+          
       }
-    } catch (err: any) {
-      setErrorMessage(`Error: ${err.message || 'Something went wrong'}`);
-    } finally {
-      setIsLoading(false);
+      else{
+        setErrorMessage("No File Selected, Please select a file or take a photo")
+      }
     }
-  };
+    catch (err :any){
+      console.error("Error uploading file:", err);
+      setErrorMessage("Error: Something went wrong") 
+    }
+    finally{
+      setIsLoading(false)
+    }  
+  }
+
+  const handleOCR = async(formData: FormData, token: string) =>{
+    const response = await fetch('http://localhost:8000/extract-text', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Accept': 'application/json',
+        // Remove Content-Type header to let the browser set it automatically with the correct boundary
+      },
+      body: formData
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      try {
+        const errorData = JSON.parse(errorText);
+        if (errorData.detail) {
+          throw new Error(errorData.detail);
+        } else {
+          throw new Error(JSON.stringify(errorData));
+        }
+      } catch (e) {
+        throw new Error(errorText || 'Failed to extract text');
+      }
+    }
+
+    const data = await response.json()
+    if (data){
+      return data
+    }  
+  }
+
+  const base64ToArrayBuffer = (base64: any) => {
+    const binaryString = atob(base64);
+    const len = binaryString.length;
+    const bytes = new Uint8Array(len);
+    for (let i = 0; i < len; i++) {
+      bytes[i] = binaryString.charCodeAt(i);
+    }
+    return bytes.buffer;
+  }
+
+  const base64ToUint8Array = (base64 : any) => {
+    const binaryString = atob(base64);
+    const len = binaryString.length;
+    const bytes = new Uint8Array(len);
+    for (let i = 0; i < len; i++) {
+      bytes[i] = binaryString.charCodeAt(i);
+    }
+    return bytes;
+  }
 
   return (
   <SafeAreaProvider>
@@ -329,5 +390,25 @@ const styles = StyleSheet.create({
   errorContainer: {
     marginBottom: 15,
     padding: 10,
+  },
+  resultContainer: {
+    marginTop: 30,
+    padding: 20,
+    backgroundColor: "#fff",
+    borderRadius: 5,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 5,
+    elevation: 3,
+  },
+  resultTitle: {
+    fontSize: 18,
+    fontWeight: "bold",
+    marginBottom: 10,
+  },
+  resultText: {
+    fontSize: 16,
+    color: "#333",
   },
 })
