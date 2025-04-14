@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Body
 from typing import Dict, Optional
+from nltk.corpus import wordnet
 import requests
 import hashlib
 import uuid
@@ -134,3 +135,94 @@ async def translate_text(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error translating text: {str(e)}"
         ) 
+    
+@router.post("/word", status_code=status.HTTP_200_OK)
+async def translate_word(
+    data: Dict[str, str] = Body(...),
+    current_user = Depends(get_current_user)
+):
+    """
+    Translate a single word to the target language and return additional information:
+    - Part of speech
+    - English meanings
+    
+    - Requires authentication
+    - Request body:
+      {
+        "word": "Word to translate",
+        "target_language": "zh" (language code, e.g., en, zh, ja, etc.)
+      }
+    - Returns translated word, part of speech, and English meanings
+    """
+    if not data.get("word"):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Word to translate is required"
+        )
+        
+    if not data.get("target_language"):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Target language is required"
+        )
+        
+    try:
+        word = data["word"]
+        target_language = data["target_language"]
+        
+        # Use NLTK to get part of speech and English meanings
+        def get_word_meaning(word):
+            synsets = wordnet.synsets(word)
+            meanings = {}
+            for synset in synsets:
+                pos = synset.pos()  # Part of speech
+                definition = synset.definition()
+                meanings.setdefault(pos, []).append(definition)
+            return meanings
+
+        word_meaning = get_word_meaning(word)
+        part_of_speech = list(word_meaning.keys())
+        english_meanings = list(word_meaning.values())
+        
+        # If Youdao credentials are not set, return dummy translation
+        if not YOUDAO_APP_KEY or not YOUDAO_APP_SECRET:
+            return {
+                "word": word,
+                "translated_word": f"[Translation of '{word}' to {target_language}]",
+                "part_of_speech": part_of_speech,
+                "english_meanings": english_meanings,
+                "source_language": "auto",
+                "target_language": target_language
+            }
+        
+        # Translate the word using Youdao API
+        translation_request = TranslationRequest(
+            text=word,
+            target_language=target_language
+        )
+        params = translation_request.get_youdao_params()
+        response = requests.get(YOUDAO_API_URL, params=params)
+        response_json = response.json()
+        
+        if response_json.get("errorCode") != "0":
+            raise Exception(f"Youdao API error: {response_json.get('errorCode')}")
+        
+        # Extract translation from response
+        translations = response_json.get("translation", [])
+        if not translations:
+            raise Exception("No translation found in response")
+        
+        return {
+            "word": word,
+            "translated_word": translations[0],
+            "part_of_speech": part_of_speech,
+            "english_meanings": english_meanings,
+            "source_language": response_json.get("l", "").split("2")[0],
+            "target_language": target_language
+        }
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error translating word: {str(e)}"
+        )
