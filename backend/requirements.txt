@@ -18,5 +18,7 @@ anyio==4.9.0
 python-dotenv
 pytesseract==0.3.10
 PyPDF2==3.0.1
+<<<<<<< HEAD
 pdfplumber==0.10.4
 nltk==3.9.1
+

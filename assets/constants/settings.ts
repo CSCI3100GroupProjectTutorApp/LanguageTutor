@@ -14,6 +14,7 @@ export const SETTINGDATA : Setting[] = [
           title: "Licence",
           description:"",
           icon: "key",
+          href: "/",
         },
       ],
     },
@@ -32,5 +33,16 @@ export const SETTINGDATA : Setting[] = [
         },
       ],
     },
-
+    {
+      section: "Actions",
+      items: [
+        {
+          title: "Log Out",
+          description: "",
+          icon: "log-out-outline",
+          action: "logout",
+          logoutStyle: true,
+        },
+      ],
+    },
   ];

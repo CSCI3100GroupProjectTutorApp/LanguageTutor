@@ -5,6 +5,9 @@ import os
 import logging
 from google.cloud import vision
 from google.oauth2 import service_account
+import tempfile
+import PyPDF2
+import pdfplumber
 
 from ..auth.auth_handler import get_current_user
 from ..database.mongodb_connection import get_mongodb_client
@@ -17,10 +20,10 @@ logger = logging.getLogger(__name__)
 # Initialize Google Cloud Vision client
 try:
     # Check if we have credentials as environment variable
-    if os.environ.get("GOOGLE_APPLICATION_CREDENTIALS_JSON"):
+    if os.environ.get("GOOGLE_APPLICATION_CREDENTIALS"):
         # Parse credentials from environment variable
         import json
-        credentials_info = json.loads(os.environ.get("GOOGLE_APPLICATION_CREDENTIALS_JSON"))
+        credentials_info = json.loads(os.environ.get("GOOGLE_APPLICATION_CREDENTIALS"))
         credentials = service_account.Credentials.from_service_account_info(credentials_info)
         vision_client = vision.ImageAnnotatorClient(credentials=credentials)
         logger.info("Initialized Vision API client with credentials from environment variable JSON")
@@ -73,16 +76,63 @@ async def detect_text(image_content):
             # Re-raise the original exception
             raise
 
+async def process_pdf(pdf_content):
+    """
+    Process a PDF file and extract text
+    
+    Args:
+        pdf_content: Binary content of the PDF file
+        
+    Returns:
+        Extracted text
+    """
+    try:
+        pdf_file = BytesIO(pdf_content)
+        
+        # First try with pdfplumber, which has better text extraction capabilities
+        extracted_text = ""
+        
+        with pdfplumber.open(pdf_file) as pdf:
+            for page_num, page in enumerate(pdf.pages):
+                page_text = page.extract_text(x_tolerance=3)
+                if page_text and page_text.strip():
+                    extracted_text += f"--- Page {page_num+1} ---\n{page_text}\n\n"
+        
+        # If we got meaningful text, return it
+        if extracted_text and len(extracted_text.strip()) > 50:  # Arbitrary threshold
+            return extracted_text
+            
+        # If pdfplumber didn't extract enough text, try PyPDF2 as a fallback
+        pdf_file.seek(0)  # Reset file pointer
+        pdf_reader = PyPDF2.PdfReader(pdf_file)
+        extracted_text = ""
+        
+        for page_num in range(len(pdf_reader.pages)):
+            page = pdf_reader.pages[page_num]
+            page_text = page.extract_text()
+            if page_text and page_text.strip():
+                extracted_text += f"--- Page {page_num+1} ---\n{page_text}\n\n"
+        
+        # If we still don't have meaningful text, we can't extract text from this PDF
+        if not extracted_text or len(extracted_text.strip()) < 50:
+            return "This PDF does not contain extractable text. It may be scanned documents or images. Please try OCR on individual pages as images."
+                
+        return extracted_text
+                
+    except Exception as e:
+        logger.error(f"Error processing PDF: {str(e)}")
+        raise Exception(f"Error processing PDF: {str(e)}")
+
 @router.post("", status_code=status.HTTP_200_OK)
 async def extract_text_from_image(
     file: UploadFile = File(...),
     current_user = Depends(get_current_user)
 ):
     """
-    Extract text from an uploaded image using OCR
+    Extract text from an uploaded image or PDF using OCR
     
     - Requires authentication
-    - Accepts image files (JPEG, PNG)
+    - Accepts image files (JPEG, PNG) and PDF files
     - Returns detected text
     """
     # Check if OCR is available
@@ -111,19 +161,23 @@ async def extract_text_from_image(
     
     # Check file format
     file_extension = file.filename.split(".")[-1].lower()
-    if file_extension not in ["jpg", "jpeg", "png"]:
+    if file_extension not in ["jpg", "jpeg", "png", "pdf"]:
         raise HTTPException(
             status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
-            detail="Only JPEG and PNG images are supported"
+            detail="Only JPEG, PNG, and PDF files are supported"
         )
     
     try:
         # Reset file pointer to beginning
         contents.seek(0)
-        image_content = contents.read()
+        file_content = contents.read()
         
-        # Extract text using Google Cloud Vision
-        extracted_text = await detect_text(image_content)
+        # Extract text based on file type
+        if file_extension == "pdf":
+            extracted_text = await process_pdf(file_content)
+        else:
+            # Image files (jpg, png)
+            extracted_text = await detect_text(file_content)
         
         return {
             "text": extracted_text,

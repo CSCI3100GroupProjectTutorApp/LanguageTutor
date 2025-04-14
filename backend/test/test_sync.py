@@ -199,6 +199,85 @@ def test_sync_endpoint():
     except Exception as e:
         print(f"Test exception: {str(e)}")
         print(traceback.format_exc())
+        
+def test_offline_sync():
+    try:
+        # Step 1: Login to get an access token
+        print("Logging in for offline sync test...")
+        response = requests.post(
+            f"{BASE_URL}/login",
+            data={"username": USERNAME, "password": PASSWORD}
+        )
+        if response.status_code != 200:
+            print(f"Login failed: {response.status_code} - {response.text}")
+            return
+        token_data = response.json()
+        access_token = token_data["access_token"]
+        headers = {"Authorization": f"Bearer {access_token}", "Content-Type": "application/json"}
+
+        # Step 2: Get user_id
+        response = requests.get(f"{BASE_URL}/users/me", headers=headers)
+        if response.status_code != 200:
+            print(f"Failed to get user info: {response.status_code} - {response.text}")
+            return
+        user_id = response.json()["user_id"]
+
+        # Step 3: Simulate offline operations and sync
+        print("\nSimulating offline operations and syncing...")
+        offline_operations = [
+            {
+                "operation": "add",
+                "word": "offline_word1",
+                "translation": "离线单词1",
+                "timestamp": datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                "data": {"en_meaning": "First offline word", "part_of_speech": ["noun"]}
+            },
+            {
+                "operation": "add",
+                "word": "offline_word2",
+                "translation": "离线单词2",
+                "timestamp": datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                "data": {"en_meaning": "Second offline word", "part_of_speech": ["noun"]}
+            }
+        ]
+        sync_data = {
+            "user_id": user_id,
+            "device_id": "offline_test_device",
+            "last_sync_timestamp": None,
+            "operations": offline_operations
+        }
+
+        # Step 4: Send sync request
+        response = requests.post(f"{BASE_URL}/sync/", headers=headers, json=sync_data)
+        if response.status_code != 200:
+            print(f"Offline sync failed: {response.status_code} - {response.text}")
+            return
+        result = response.json()
+        print(f"Sync response: {json.dumps(result, indent=2)}")
+        if result.get("synced_count") != len(offline_operations):
+            print(f"Expected {len(offline_operations)} operations, got {result.get('synced_count')}")
+            return
+
+        # Step 5: Verify words were added
+        print("\nVerifying offline sync results...")
+        response = requests.get(f"{BASE_URL}/words/", headers=headers)
+        if response.status_code != 200:
+            print(f"Failed to get words: {response.status_code} - {response.text}")
+            return
+        words = response.json()
+        added_words = [op["word"] for op in offline_operations]
+        for word in added_words:
+            if not any(w["word"] == word for w in words):
+                print(f"Word '{word}' not found after sync!")
+                return
+        print("Offline sync test passed successfully!")
+
+    except Exception as e:
+        print(f"Offline sync test failed: {str(e)}")
+        print(traceback.format_exc())
 
 if __name__ == "__main__":
+    print("Running online sync test...")
     test_sync_endpoint()
+    print("\nRunning offline sync test...")
+    test_offline_sync()

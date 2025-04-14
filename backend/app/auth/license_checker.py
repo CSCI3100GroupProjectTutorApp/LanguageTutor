@@ -9,7 +9,28 @@ async def verify_license(
     db = Depends(get_db)
 ):
     """Verify the user has a valid license"""
-    result = await check_user_license(db, current_user.id)
+    # Get the user_id from the current user object, trying different attribute names
+    user_id = None
+    if hasattr(current_user, 'user_id'):
+        user_id = current_user.user_id
+    elif hasattr(current_user, 'id'):
+        user_id = current_user.id
+    elif hasattr(current_user, '_id'):
+        user_id = current_user._id
+    
+    if not user_id:
+        # If we can't find the user ID in any of the expected attributes, try to get it from dict()
+        if hasattr(current_user, 'dict'):
+            user_dict = current_user.dict()
+            user_id = user_dict.get('user_id') or user_dict.get('id') or user_dict.get('_id')
+    
+    if not user_id:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Could not determine user ID from authentication token"
+        )
+    
+    result = await check_user_license(db, user_id)
     
     if not result["has_license"]:
         raise HTTPException(

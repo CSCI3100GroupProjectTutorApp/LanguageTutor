@@ -8,14 +8,13 @@ import {SettingLayout} from "../../components/SettingLayout"
 const settings = () => {
   return (
     <ScrollView style={styles.container}>
-            <Text style={styles.header}>Settings</Text>
+      <Text style={styles.header}>Settings</Text>
       <FlatList
         data={SETTINGDATA}
         renderItem={({ item }) => 
                 <SettingLayout settings={item}/>}
         scrollEnabled={false}
       />
-    <Link href="/404" style={styles.link}>Log Out</Link>  
     </ScrollView>
     
   );
@@ -34,12 +33,5 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     color: "#6713ba",
     marginVertical: 16,
-  },
-  link: {
-    fontSize: 25,
-    color: "red",
-    textAlign: "center",
-    paddingBottom: 20,
-    fontWeight:"bold",
   },
 });
