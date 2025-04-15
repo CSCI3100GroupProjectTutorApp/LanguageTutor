@@ -59,9 +59,7 @@ class WordStorage:
                 operation TEXT NOT NULL,  -- 'add', 'update', 'delete', 'view', 'quiz', etc.
                 user_id TEXT NOT NULL,  -- User ID for the operation
                 wordid INTEGER,
-                word TEXT,
-                result TEXT,  -- For quiz operations: 'correct', 'incorrect', etc.
-                context TEXT,  -- Optional context/sentence
+                word TEXT,  -- Word text
                 data TEXT,  -- JSON string of additional operation data
                 timestamp TEXT NOT NULL
             )
