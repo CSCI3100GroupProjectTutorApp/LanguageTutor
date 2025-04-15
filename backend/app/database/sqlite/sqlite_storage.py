@@ -69,17 +69,7 @@ class WordStorage:
     
     async def add_word(self, word, en_meaning, ch_meaning, part_of_speech, user_id) -> int:
         """
-        Add a new word to the local database
-        
-        Args:
-            word: The word to add
-            en_meaning: English meaning/definition
-            ch_meaning: Chinese meaning/translation
-            part_of_speech: List of parts of speech (e.g., ["noun", "verb"])
-            user_id: User ID adding the word
-            
-        Returns:
-            wordid: The ID of the newly created word
+        Add a new word to the local database.
         """
         async with aiosqlite.connect(self.db_path) as conn:
             try:
@@ -91,28 +81,13 @@ class WordStorage:
                 existing_word = await cursor.fetchone()
                 if existing_word:
                     print(f"Word '{word}' already exists with ID {existing_word[0]}")
-                    
-                    # Record this as a "view" operation for syncing in the same transaction
-                    timestamp = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-                    await conn.execute(
-                        """
-                        INSERT INTO sync_queue 
-                        (operation, user_id, wordid, word, data, timestamp) 
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-                        """,
-                        ("view", user_id, existing_word[0], word, None, None, None, timestamp)
-                    )
-                    
                     await conn.commit()
                     return existing_word[0]
-                    
+                
                 # Find the maximum word ID
                 cursor = await conn.execute("SELECT MAX(wordid) FROM words")
                 result = await cursor.fetchone()
-                if result[0] is not None:
-                    wordid = result[0] + 1
-                else:
-                    wordid = 1  # Start with ID 1 if table is empty
+                wordid = result[0] + 1 if result[0] is not None else 1
 
                 # Get current timestamp
                 current_time = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
@@ -135,15 +110,13 @@ class WordStorage:
                     "part_of_speech": part_of_speech,
                     "wordtime": current_time
                 }
-                
-                # Add to sync queue directly instead of calling the separate method
                 await conn.execute(
                     """
                     INSERT INTO sync_queue 
                     (operation, user_id, wordid, word, data, timestamp) 
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                    VALUES (?, ?, ?, ?, ?, ?)
                     """,
-                    ("add", user_id, wordid, word, None, None, json.dumps(data), current_time)
+                    ("add", user_id, wordid, word, json.dumps(data), current_time)
                 )
                 
                 # Commit the entire transaction
@@ -369,9 +342,9 @@ class WordStorage:
                         """
                         INSERT INTO sync_queue 
                         (operation, user_id, wordid, word, data, timestamp) 
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                        VALUES (?, ?, ?, ?, ?, ?)
                         """,
-                        ("update", user_id, wordid, word, None, None, json.dumps(update_data), timestamp)
+                        ("update", user_id, wordid, word, json.dumps(update_data), timestamp)
                     )
                     
                     # Commit the entire transaction
@@ -442,9 +415,9 @@ class WordStorage:
                     """
                     INSERT INTO sync_queue 
                     (operation, user_id, wordid, word, data, timestamp) 
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                    VALUES (?, ?, ?, ?, ?, ?)
                     """,
-                    ("delete", user_id, wordid, word, None, None, json.dumps(data), timestamp)
+                    ("delete", user_id, wordid, word, json.dumps(data), timestamp)
                 )
 
                 # Commit the entire transaction
