@@ -97,7 +97,7 @@ class WordStorage:
                     await conn.execute(
                         """
                         INSERT INTO sync_queue 
-                        (operation, user_id, wordid, word, result, context, data, timestamp) 
+                        (operation, user_id, wordid, word, data, timestamp) 
                         VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                         """,
                         ("view", user_id, existing_word[0], word, None, None, None, timestamp)
@@ -140,7 +140,7 @@ class WordStorage:
                 await conn.execute(
                     """
                     INSERT INTO sync_queue 
-                    (operation, user_id, wordid, word, result, context, data, timestamp) 
+                    (operation, user_id, wordid, word, data, timestamp) 
                     VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                     """,
                     ("add", user_id, wordid, word, None, None, json.dumps(data), current_time)
@@ -368,7 +368,7 @@ class WordStorage:
                     await conn.execute(
                         """
                         INSERT INTO sync_queue 
-                        (operation, user_id, wordid, word, result, context, data, timestamp) 
+                        (operation, user_id, wordid, word, data, timestamp) 
                         VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                         """,
                         ("update", user_id, wordid, word, None, None, json.dumps(update_data), timestamp)
@@ -441,7 +441,7 @@ class WordStorage:
                 await conn.execute(
                     """
                     INSERT INTO sync_queue 
-                    (operation, user_id, wordid, word, result, context, data, timestamp) 
+                    (operation, user_id, wordid, word, data, timestamp) 
                     VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                     """,
                     ("delete", user_id, wordid, word, None, None, json.dumps(data), timestamp)
@@ -457,57 +457,13 @@ class WordStorage:
                 print(f"Error deleting word:", e)
                 raise e
     
-    async def record_quiz_attempt(self, user_id, wordid, is_correct, context=None):
-        """
-        Record a quiz attempt
-        
-        Args:
-            user_id: User identifier
-            wordid: Word ID
-            is_correct: Whether the answer was correct
-            context: Optional context/sentence
-            
-        Returns:
-            Boolean indicating success
-        """
-        async with aiosqlite.connect(self.db_path) as conn:
-            try:
-                # Get word text
-                cursor = await conn.execute("SELECT word FROM words WHERE wordid = ?", (wordid,))
-                row = await cursor.fetchone()
-                if not row:
-                    print(f"Word with ID {wordid} not found")
-                    return False
-                
-                word = row[0]
-                result = "correct" if is_correct else "incorrect"
-                
-                # Add to sync queue
-                await self._add_to_sync_queue(
-                    "quiz", 
-                    user_id, 
-                    wordid, 
-                    word, 
-                    result, 
-                    context, 
-                    None
-                )
-                
-                await conn.commit()
-                return True
-            except Exception as e:
-                await conn.rollback()
-                print(f"Error recording quiz attempt:", e)
-                return False
-    
-    async def mark_word(self, user_id, wordid, context=None):
+    async def mark_word(self, user_id, wordid):
         """
         Mark a word as important/favorite
         
         Args:
             user_id: User identifier
             wordid: Word ID
-            context: Optional context/note
             
         Returns:
             Boolean indicating success
@@ -529,8 +485,6 @@ class WordStorage:
                     user_id, 
                     wordid, 
                     word, 
-                    None, 
-                    context, 
                     None
                 )
                 
@@ -541,7 +495,7 @@ class WordStorage:
                 print(f"Error marking word:", e)
                 return False
     
-    async def _add_to_sync_queue(self, operation, user_id, wordid, word, result, context, data, conn=None):
+    async def _add_to_sync_queue(self, operation, user_id, wordid, word, data, conn=None):
         """
         Add an operation to the sync queue
         
@@ -550,8 +504,6 @@ class WordStorage:
             user_id: User ID performing the operation
             wordid: Word ID
             word: Word text
-            result: Optional result (correct, incorrect, etc.)
-            context: Optional context/sentence
             data: Optional JSON string of additional data
             conn: Optional database connection (if None, creates a new one)
             
@@ -568,10 +520,10 @@ class WordStorage:
                 await conn.execute(
                     """
                     INSERT INTO sync_queue 
-                    (operation, user_id, wordid, word, result, context, data, timestamp) 
+                    (operation, user_id, wordid, word, data, timestamp) 
                     VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                     """,
-                    (operation, user_id, wordid, word, result, context, data, timestamp)
+                    (operation, user_id, wordid, word, data, timestamp)
                 )
                 
                 return True
@@ -589,10 +541,10 @@ class WordStorage:
                     await new_conn.execute(
                         """
                         INSERT INTO sync_queue 
-                        (operation, user_id, wordid, word, result, context, data, timestamp) 
+                        (operation, user_id, wordid, word, data, timestamp) 
                         VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                         """,
-                        (operation, user_id, wordid, word, result, context, data, timestamp)
+                        (operation, user_id, wordid, word, data, timestamp)
                     )
                     
                     await new_conn.commit()
@@ -680,8 +632,6 @@ class WordStorage:
                 user_id = sync_op['user_id']
                 wordid = sync_op['wordid']
                 word = sync_op['word']
-                result = sync_op['result']
-                context = sync_op['context']
                 data = sync_op['data']
                 
                 try:
@@ -695,8 +645,6 @@ class WordStorage:
                         wordid=wordid,
                         word=word,
                         operation_type=operation,
-                        result=result,
-                        context=context,
                         data=data
                     )
                     
