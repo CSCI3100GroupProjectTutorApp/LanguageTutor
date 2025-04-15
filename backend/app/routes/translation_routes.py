@@ -11,6 +11,7 @@ from ..auth.auth_handler import get_current_user
 
 router = APIRouter(prefix="/translate", tags=["Translation"])
 
+
 # Get Youdao API credentials from environment
 YOUDAO_APP_KEY = os.environ.get("YOUDAO_APP_KEY", "")
 YOUDAO_APP_SECRET = os.environ.get("YOUDAO_APP_SECRET", "")
