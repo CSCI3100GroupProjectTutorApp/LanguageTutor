@@ -37,6 +37,7 @@ To run just the backend API:
 ```
 cd backend
 python -m uvicorn app.main:app --reload
+python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 //for local network host
 ```
 
 ### Frontend Only
@@ -50,7 +51,7 @@ npm run web
 ## API Endpoints
 
 The API will be available at `http://localhost:8000` with the following endpoints:
-
+- API will be available at `http://{IPAddress}:8000` if host to local network
 - `/` - Welcome message
 - `/docs` - Interactive API documentation (Swagger UI)
 - `/redoc` - Alternative API documentation
