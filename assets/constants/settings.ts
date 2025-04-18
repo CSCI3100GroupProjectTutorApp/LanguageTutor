@@ -8,13 +8,14 @@ export const SETTINGDATA : Setting[] = [
         {
           title: "My Account",
           description: "",
-          icon: "person-circle-sharp", 
+          icon: "person-circle-sharp",
+          href: "../settings/profile", 
         },
         {
           title: "Licence",
           description:"",
           icon: "key",
-          href: "/",
+          href: "../settings/license",
         },
       ],
     },
@@ -22,14 +23,16 @@ export const SETTINGDATA : Setting[] = [
       section: "Help",
       items: [
         {
-          title: "Q&A",
+          title: "FQA",
           description: "",
           icon: "help-circle-outline",
+          href: "../settings/FQA",
         },
         {
           title: "About",
           description: "",
           icon: "information-circle-outline",
+          href: "../settings/about",
         },
       ],
     },
