@@ -4,10 +4,20 @@ import { Ionicons } from "@expo/vector-icons";
 import { Link, useRouter } from 'expo-router';
 import { clearAuthToken } from '../services/authService';
 import { logout } from '../api/auth';
-
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export const SettingLayout = ({ settings }:{settings : Setting}) => {
     const router = useRouter();
+
+    const handleLogout = async() =>{
+        try{ 
+            await AsyncStorage.setItem('userLoggedIn', 'false');
+            await AsyncStorage.setItem('userid', "")
+        }
+        catch(e){
+            console.error("Logout Error: ",e)
+        }   
+    }
 
     const handleAction = async (action: string | undefined) => {
         console.log("Action triggered:", action);
@@ -26,6 +36,7 @@ export const SettingLayout = ({ settings }:{settings : Setting}) => {
                             console.log("Logout confirmed, attempting to log out...");
                             // Clear the authentication token
                             clearAuthToken();
+                            handleLogout()
                             
                             // Force navigation using different methods based on platform
                             if (Platform.OS === 'web') {
@@ -35,7 +46,7 @@ export const SettingLayout = ({ settings }:{settings : Setting}) => {
                             } else {
                                 // For native, use router
                                 console.log("Using router.replace for native logout...");
-                                router.replace('/');
+                                router.replace('../(auths)');
                             }
                         }
                     }
