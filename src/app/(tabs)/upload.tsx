@@ -118,22 +118,16 @@ const upload = () => {
       if (photo || selectFile){
         // Case: Photo taken to upload -> call OCR
         if(photo){
-          const response = await fetch(photo.uri)
-          const blob = await response.blob()
-          if (Platform.OS === 'web') {
-            formData.append('file', blob, 'image.jpg');
-          } 
-          else {
-            // For native platforms
             formData.append('file', {
-              uri: photo.uri.replace('file://', ''),
+              uri: photo.uri,
               type: 'image/jpeg',
               name: 'image.jpg'
             } as any);
-          }
+          
           const data = await handleOCR(formData,token)
           setExtractedText(data.text)
           const text = encodeURIComponent(data.text)
+          setPhoto(null)
           router.navigate(`../translate/${text}`)
         }
         // Case: File selected to upload
@@ -149,7 +143,16 @@ const upload = () => {
             })
             
             if(fileType.includes('application/pdf')){
-              // OCR for pdf
+                formData.append('file', {
+                  uri: selectFile.uri,
+                  type: selectFile.mimeType,
+                  name: selectFile.name
+                } as any);
+                const data = await handleOCR(formData,token)
+                setExtractedText(data.text)
+                const text = encodeURIComponent(data.text)
+                setSelectFile(null)
+                router.navigate(`../translate/${text}`)
             }
             else if(fileType.includes('application/msword') || fileType.includes('application/vnd.openxmlformats-officedocument.wordprocessingml.document')){
               const data = await FileSystem.readAsStringAsync(newPath,{
@@ -161,28 +164,23 @@ const upload = () => {
 
               setExtractedText(value);
               const text = encodeURIComponent(value.replace(/%/g,'~~~pct~~~'))
+              setSelectFile(null)
               router.navigate(`../translate/${text}`)
             }
             else if(fileType.includes('text/plain')){
               const data = await FileSystem.readAsStringAsync(newPath)
               setExtractedText(data)
               const text = encodeURIComponent(data)
+              setSelectFile(null)
               router.navigate(`../translate/${text}`)
 
             } 
           }
           // Case: File is image -> call OCR
           else{
-            if (Platform.OS === 'web') {
-              // Get the actual file object from the asset
-              const response = await fetch(selectFile.uri);
-              const blob = await response.blob();
-              formData.append('file', blob, selectFile.name);
-            } 
-            else{
               // For native platforms
               formData.append('file', {
-                uri: selectFile.uri.replace('file://', ''),
+                uri: selectFile.uri,
                 type: selectFile.mimeType,
                 name: selectFile.name
               } as any);
@@ -191,8 +189,9 @@ const upload = () => {
             const data = await handleOCR(formData,token)
             setExtractedText(data.text)
             const text = encodeURIComponent(data.text)
+            setSelectFile(null)
             router.navigate(`../translate/${text}`)
-          }
+
         }
           
       }
@@ -210,12 +209,11 @@ const upload = () => {
   }
 
   const handleOCR = async(formData: FormData, token: string) =>{
-    const response = await fetch('http://localhost:8000/extract-text', {
+    const response = await fetch('http://192.168.0.118:8000/extract-text', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${token}`,
         'Accept': 'application/json',
-        // Remove Content-Type header to let the browser set it automatically with the correct boundary
       },
       body: formData
     });

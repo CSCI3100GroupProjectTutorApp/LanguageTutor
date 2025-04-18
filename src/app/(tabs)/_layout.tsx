@@ -1,6 +1,6 @@
 import {Tabs,Stack} from "expo-router"
 import { SafeAreaView } from "react-native-safe-area-context"
-import { StyleSheet } from "react-native";
+import { StyleSheet, Platform} from "react-native";
 import {Ionicons} from "@expo/vector-icons";
 
 function TabBarIcon(props:{
@@ -8,14 +8,14 @@ function TabBarIcon(props:{
     focused: boolean;
 }){
     const {name, focused} = props;
-    return <Ionicons name={name} size={24} color={focused? "#33ff96" : "gray"}/>;
+    return <Ionicons name={name} size={24} color={focused? "#703682" : "gray"}/>;
 }
 
 const TabsLayout = () => {
     return (
         <SafeAreaView  style={styles.safeArea}>
             <Tabs screenOptions={{
-                tabBarActiveTintColor:"#33ff96",
+                tabBarActiveTintColor:"#703682",
                 tabBarInactiveTintColor: "gray",
                 tabBarLabelStyle:{fontSize: 12},
                 tabBarStyle:{
@@ -72,7 +72,10 @@ export default TabsLayout;
 const styles = StyleSheet.create({
     safeArea:{
         flex:1,
-        
+        justifyContent: "center",
+        maxWidth: Platform.OS === 'web' ? 480 : '100%',
+        alignSelf: Platform.OS === 'web' ? 'center' : 'stretch',
+        minHeight: Platform.OS === 'web' ? '100%' : 'auto',
     },
 
 });

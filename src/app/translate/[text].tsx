@@ -1,14 +1,17 @@
-import { StyleSheet, Text, View, FlatList, TouchableOpacity, Platform, Pressable, TouchableWithoutFeedback, Dimensions } from 'react-native'
-import { Redirect, useLocalSearchParams, Stack} from 'expo-router'
-import React, { useState, useCallback, useMemo, useEffect } from 'react'
+import { StyleSheet, Text, View, FlatList, TouchableOpacity, Platform, Pressable, TouchableWithoutFeedback, Dimensions, Alert } from 'react-native'
+import { Redirect, useLocalSearchParams, Stack, useFocusEffect} from 'expo-router'
+import React, { useState, useCallback, useMemo, useEffect, } from 'react'
 import { FontAwesome5 } from '@expo/vector-icons'
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { getAuthToken } from '../../services/authService'
+import { Word, WordCreate } from '../../../assets/types/Word'
+import * as wordService from '../../services/wordService';
+import * as translateService from '../../services/translateService';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const text = () => {
   const { text } = useLocalSearchParams<{ text: string }>()
   const decodedText = decodeURIComponent(text).replace('~~~pct~~~', '%')
-  
   const [selectedWordId, setSelectedWordId] = useState<string | null>(null);
   const [popupPosition, setPopupPosition] = useState({ x: 0, y: 0 });
   const [isPopupVisible, setIsPopupVisible] = useState(false);
@@ -16,16 +19,45 @@ const text = () => {
   const [translation, setTranslation] = useState<string>('');
   const [isTranslating, setIsTranslating] = useState(false);
   const [successTranslate, setSuccessTranslate] = useState(false)
+  const [userid, setUserid] = useState("")
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const wordsPerPage = 500;
   
+
+  useFocusEffect(
+    useCallback(() => {
+      const initUserID = async () => {
+        try {
+          await getUserID()
+        } catch (error) {
+          console.error("Failed to initialize database:", error);
+        }
+      };
+      initUserID();
+      // Return a cleanup function
+      return () => {
+        // Any cleanup if needed
+      };
+    }, [text]) // Re-run effect when text changes
+  );
+
   // Define what characters are considered punctuation
   const isPunctuation = useCallback((char: string) => {
     return /[.,;:!?/\"\(\)\[\]\{\}<>]/.test(char);
   }, []);
   
+  const getUserID = async () => {
+    try {
+      const userID = await AsyncStorage.getItem("userid")
+
+      setUserid(userID || "")
+    } catch (error) {
+      console.error("Failed to load words:", error);
+    }
+  };
+
   // Function to translate text
   const translateWord = useCallback(async (word: string) => {
     setIsTranslating(true);
@@ -35,15 +67,15 @@ const text = () => {
       if (!accesstoken) {
         throw new Error('Not authenticated');
       }
-      const response = await fetch('http://localhost:8000/translate', {
+      const response = await fetch('http://192.168.0.118:8000/translate/word', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${accesstoken}`,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          text: word,
-          target_language: "zh",
+          word: word,
+          target_language: "zh-tw",
         })
       })
       if (!response.ok) {
@@ -62,7 +94,7 @@ const text = () => {
   
       const data = await response.json()
       setSuccessTranslate(true)
-      return data.translated_text  
+      return data.translated_word
     } catch (error) {
       return 'Translation failed';
     }
@@ -299,6 +331,32 @@ const text = () => {
       setIsPopupVisible(false);
     }
   }, [currentPage]);
+  const addWord = async() => {
+    
+    console.log(selectedContent)
+    let cleanedWord = selectedContent.replace(/(?!\B['’-]\B)[^\w'’-]+/g, '');
+
+    // Check if the cleaned word contains any alphabetic characters
+    const containsAlphabet = /[a-zA-Z]/.test(cleanedWord);
+    
+    if (!cleanedWord || !containsAlphabet) {
+      Alert.alert("Cannot be added. Please select other");
+      return;
+    }
+    else{
+      try {
+            const wordCreate: WordCreate = await translateService.translateWordCreate(cleanedWord)
+            await wordService.addWord(
+              wordCreate,
+              userid
+            ) 
+            Alert.alert("Success", `Added word "${cleanedWord}" successfully!`);
+          } catch (error) {
+            console.error("Failed to add word:", error);
+            Alert.alert("Error", "Failed to add the word to database.");
+          }
+    }
+  }
   
   return (
     <SafeAreaView style={styles.container}>
@@ -360,7 +418,7 @@ const text = () => {
               <Text style={styles.popupText}>Translation Failed</Text> }
             <Text style={styles.selectedWordText}>{selectedContent}</Text>
           </View>
-          <TouchableOpacity style={styles.addButton} onPress={() => {}}>
+          <TouchableOpacity style={styles.addButton} onPress={addWord}>
             <Text style={styles.addButtonText}>Add</Text>
           </TouchableOpacity>
         </View>
