@@ -1,7 +1,26 @@
-export type Word = {
-    name: string;
-    partOfSpeech:string[]
-    definition:{[partOfSpeech: string]: string[]}
-    example:{[partOfSpeech: string]: string[]}
-    recent: number
-  };
+export interface WordCreate {
+  word: string;
+  en_meaning?: { [key: string]: string }
+  ch_meaning?: string[];
+  part_of_speech?: string[];
+  translated?: number;
+}
+
+export interface WordUpdate {
+  word: string;
+  en_meaning?: { [key: string]: string };
+  ch_meaning?: string[];
+  part_of_speech?: string[];
+  translated?: number;
+}
+
+export interface Word {
+  wordid: number;
+  word: string;
+  en_meaning: {[key: string]: string};
+  ch_meaning: string[];
+  part_of_speech: string[];
+  wordtime: string;
+  synced?: number;
+  translated?: number;
+}
