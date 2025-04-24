@@ -1,14 +1,17 @@
 
 import {View, StyleSheet, Text, StatusBar, TouchableOpacity,Platform, ActivityIndicator, Alert, Linking, ScrollView, Pressable} from 'react-native';
 import {SafeAreaView, SafeAreaProvider} from 'react-native-safe-area-context';
-import React, {useState} from 'react';
+import React, {useState, useEffect} from 'react';
 import { AntDesign, Ionicons } from "@expo/vector-icons";
 import * as DocumentPicker from 'expo-document-picker';
 import * as ImagePicker from "expo-image-picker";
 import * as FileSystem from 'expo-file-system';
 import { getAuthToken } from '../../services/authService'
 import mammoth from "mammoth";
+import NetInfo from '@react-native-community/netinfo';
 import { useRouter } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
 
 const upload = () => {
   
@@ -17,7 +20,45 @@ const upload = () => {
   const [errorMessage, setErrorMessage] = useState(""); 
   const [isLoading, setIsLoading] = useState(false);
   const [extractedText, setExtractedText] = useState("")
+  const [navigationReady, setNavigationReady] = useState(false);
+  const [isConnected, setIsConnected] = useState(true);
   const router = useRouter ()
+
+  useEffect(() => {
+    const unsubscribe = NetInfo.addEventListener(state => {
+      setIsConnected(!!state.isConnected && !!state.isInternetReachable);
+    });
+  
+    return () => unsubscribe();
+  }, []);
+  
+
+
+  const safeNavigate = () => {
+    if (navigationReady) {
+      router.navigate({
+        pathname: "../translate",
+        params: { source: "upload" }
+      });
+    } else {
+      // Wait for navigation to be ready
+      setTimeout(() => {
+        router.navigate({
+          pathname: "../translate",
+          params: { source: "upload" }
+        });
+      }, 500);
+    }
+  };
+
+  useEffect(() => {
+    // Set navigation as ready after component mounts
+    const timer = setTimeout(() => {
+      setNavigationReady(true);
+    }, 500);
+    
+    return () => clearTimeout(timer);
+  }, []);
 
   const handleSelectFile = async () => {
     setErrorMessage("")
@@ -106,13 +147,11 @@ const upload = () => {
   const handleUpload = async() => {
     setErrorMessage("")
     setIsLoading(true)
+    if (!isConnected) {
+      setErrorMessage("No internet connection. Please check your network and try again.");
+      return;
+    }
     try{
-      
-      const token = await getAuthToken();
-        if (!token) {
-          throw new Error('Not authenticated');
-        }
-         
       const formData = new FormData()
       
       if (photo || selectFile){
@@ -124,11 +163,14 @@ const upload = () => {
               name: 'image.jpg'
             } as any);
           
-          const data = await handleOCR(formData,token)
+          const data = await handleOCR(formData)
           setExtractedText(data.text)
-          const text = encodeURIComponent(data.text)
           setPhoto(null)
-          router.navigate(`../translate/${text}`)
+          const stringifyText = typeof data.text === 'string' ? 
+            data.text 
+            : JSON.stringify(data.text);
+          await AsyncStorage.setItem('extractedText', stringifyText );
+          safeNavigate()
         }
         // Case: File selected to upload
         if(selectFile){
@@ -148,11 +190,14 @@ const upload = () => {
                   type: selectFile.mimeType,
                   name: selectFile.name
                 } as any);
-                const data = await handleOCR(formData,token)
+                const data = await handleOCR(formData)
                 setExtractedText(data.text)
-                const text = encodeURIComponent(data.text)
                 setSelectFile(null)
-                router.navigate(`../translate/${text}`)
+                const stringifyText = typeof data.text === 'string' ? 
+                  data.text 
+                  : JSON.stringify(data.text);
+                await AsyncStorage.setItem('extractedText', stringifyText );
+                safeNavigate()
             }
             else if(fileType.includes('application/msword') || fileType.includes('application/vnd.openxmlformats-officedocument.wordprocessingml.document')){
               const data = await FileSystem.readAsStringAsync(newPath,{
@@ -163,35 +208,42 @@ const upload = () => {
               })
 
               setExtractedText(value);
-              const text = encodeURIComponent(value.replace(/%/g,'~~~pct~~~'))
               setSelectFile(null)
-              router.navigate(`../translate/${text}`)
+              const stringifyText = value
+              await AsyncStorage.setItem('extractedText', stringifyText );
+              safeNavigate()
             }
             else if(fileType.includes('text/plain')){
               const data = await FileSystem.readAsStringAsync(newPath)
               setExtractedText(data)
-              const text = encodeURIComponent(data)
               setSelectFile(null)
-              router.navigate(`../translate/${text}`)
+              const stringifyText = typeof data === 'string' ? 
+                data
+                : JSON.stringify(data);
+              await AsyncStorage.setItem('extractedText', stringifyText );
+              safeNavigate()
 
             } 
           }
           // Case: File is image -> call OCR
           else{
               // For native platforms
+              console.log(`Selected File path: ${selectFile.uri}`)
               formData.append('file', {
                 uri: selectFile.uri,
                 type: selectFile.mimeType,
                 name: selectFile.name
               } as any);
+              console.log(`Handling OCR`)
+              const data = await handleOCR(formData)
+              setExtractedText(data.text)
+              setSelectFile(null)
+              const stringifyText = typeof data.text === 'string' ? 
+                data.text 
+                : JSON.stringify(data.text);
+              await AsyncStorage.setItem('extractedText', stringifyText );
+              safeNavigate()
             }
-            
-            const data = await handleOCR(formData,token)
-            setExtractedText(data.text)
-            const text = encodeURIComponent(data.text)
-            setSelectFile(null)
-            router.navigate(`../translate/${text}`)
-
         }
           
       }
@@ -208,12 +260,23 @@ const upload = () => {
     }  
   }
 
-  const handleOCR = async(formData: FormData, token: string) =>{
+  const handleOCR = async(formData: FormData) =>{
+    const token = await getAuthToken();
+    if (!token) {
+        throw new Error('Not authenticated');
+    }
+    const netInfo = await NetInfo.fetch();
+    if (!netInfo.isConnected) {
+      setErrorMessage("No internet connection available. Please check your network.");
+      setIsLoading(false);
+      return;
+    }
     const response = await fetch('http://192.168.0.118:8000/extract-text', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${token}`,
         'Accept': 'application/json',
+        'Content-Type': 'multipart/form-data',
       },
       body: formData
     });
@@ -232,21 +295,28 @@ const upload = () => {
       }
     }
 
-    const data = await response.json()
-    if (data){
-      return data
-    }  
+    return await response.json()
   }
 
-  const base64ToArrayBuffer = (base64: any) => {
-    const binaryString = atob(base64);
-    const len = binaryString.length;
-    const bytes = new Uint8Array(len);
-    for (let i = 0; i < len; i++) {
-      bytes[i] = binaryString.charCodeAt(i);
+  const base64ToArrayBuffer = (base64: string): ArrayBuffer => {
+    try {
+      // Remove any non-base64 characters (like data:application/...; prefix)
+      const cleanBase64 = base64.replace(/^data:[^;]+;base64,/, '');
+      
+      // Standard Base64 to ArrayBuffer conversion
+      const binaryString = atob(cleanBase64);
+      const bytes = new Uint8Array(binaryString.length);
+      
+      for (let i = 0; i < binaryString.length; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
+      }
+      
+      return bytes.buffer;
+    } catch (error) {
+      console.error("Error converting base64 to ArrayBuffer:", error);
+      throw new Error("Failed to convert document data");
     }
-    return bytes.buffer;
-  }
+  };
 
   const base64ToUint8Array = (base64 : any) => {
     const binaryString = atob(base64);
