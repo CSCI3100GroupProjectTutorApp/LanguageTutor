@@ -10,8 +10,8 @@ import * as translateService from '../../services/translateService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const text = () => {
-  const { text } = useLocalSearchParams<{ text: string }>()
-  const decodedText = decodeURIComponent(text).replace('~~~pct~~~', '%')
+  const params  =  useLocalSearchParams()
+  const [textContent, setTextContent] = useState<string>('');
   const [selectedWordId, setSelectedWordId] = useState<string | null>(null);
   const [popupPosition, setPopupPosition] = useState({ x: 0, y: 0 });
   const [isPopupVisible, setIsPopupVisible] = useState(false);
@@ -31,6 +31,7 @@ const text = () => {
       const initUserID = async () => {
         try {
           await getUserID()
+          await loadTextContent();
         } catch (error) {
           console.error("Failed to initialize database:", error);
         }
@@ -40,9 +41,17 @@ const text = () => {
       return () => {
         // Any cleanup if needed
       };
-    }, [text]) // Re-run effect when text changes
+    }, [params]) // Re-run effect when text changes
   );
 
+  const loadTextContent = async () => { 
+        const savedText = await AsyncStorage.getItem('extractedText');
+        if (savedText) {
+          setTextContent(savedText);
+          // Optional: Clean up storage after successful retrieval
+          await AsyncStorage.removeItem('extractedText');
+        }
+    }
   // Define what characters are considered punctuation
   const isPunctuation = useCallback((char: string) => {
     return /[.,;:!?/\"\(\)\[\]\{\}<>]/.test(char);
@@ -193,8 +202,8 @@ const text = () => {
   
   // Process the text into tokens
   const processedText = useMemo(() => {
-    return processText(decodedText);
-  }, [decodedText, processText]);
+    return processText(textContent);
+  }, [textContent, processText]);
   
   // Calculate total pages
   useEffect(() => {
