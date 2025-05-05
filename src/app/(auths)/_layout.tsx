@@ -3,7 +3,7 @@ import { StyleSheet } from "react-native"
 
 const Authlayout = () => {
   return (
-        <Stack>
+        <Stack >
             <Stack.Screen name='index' 
             options={{headerShown:false}}/>
             <Stack.Screen name='signup' 

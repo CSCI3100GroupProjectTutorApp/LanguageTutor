@@ -8,6 +8,7 @@ import os
 from motor.motor_asyncio import AsyncIOMotorClient
 from contextlib import asynccontextmanager
 
+
 # MongoDB connections
 from .database.mongodb_connection import connect_to_mongodb, close_mongodb_connection, get_db
 from .database.init_db import init_db
@@ -40,6 +41,10 @@ async def lifespan(app: FastAPI):
 # Set up logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+# Download NLTK data files
+import nltk
+nltk.download('wordnet')
 
 app = FastAPI(
     title="Language Tutoring API",

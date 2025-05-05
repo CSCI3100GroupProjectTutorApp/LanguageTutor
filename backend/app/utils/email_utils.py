@@ -96,7 +96,7 @@ async def send_license_key_email(recipient_email, license_key, username=None):
         username: The username (optional)
     
     Returns:
-        bool: True if the email was sent successfully, False otherwise
+        dict: Dictionary with 'success' boolean and 'message' string
     """
     # Create the subject
     subject = "Your Language Tutor License Key"
@@ -133,10 +133,21 @@ The Language Tutor Team
 """
     
     # Send the email
-    return await asyncio.to_thread(
+    success = await asyncio.to_thread(
         send_email,
         recipient_email=recipient_email,
         subject=subject,
         text_content=text_content,
         html_content=html_content
-    ) 
+    )
+    
+    if success:
+        return {
+            "success": True,
+            "message": f"Email sent successfully to {recipient_email}"
+        }
+    else:
+        return {
+            "success": False,
+            "message": f"Failed to send email to {recipient_email}"
+        } 

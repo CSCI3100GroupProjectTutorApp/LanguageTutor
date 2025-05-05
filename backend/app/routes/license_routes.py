@@ -169,12 +169,25 @@ async def email_license_key(
         request.username
     )
     
-    if not email_result["success"]:
+    # Handle either boolean or dictionary return type
+    email_success = False
+    email_message = ""
+    
+    if isinstance(email_result, bool):
+        # Handle boolean return
+        email_success = email_result
+        email_message = "Email sending failed" if not email_success else "Email sent successfully"
+    elif isinstance(email_result, dict):
+        # Handle dictionary return
+        email_success = email_result.get("success", False)
+        email_message = email_result.get("message", "")
+    
+    if not email_success:
         # If email fails, don't lose the license key
         return {
             "success": False,
             "license_key": license_key,
-            "message": f"License key generated but email could not be sent: {email_result['message']}"
+            "message": f"License key generated but email could not be sent: {email_message}"
         }
     
     return {
@@ -211,10 +224,24 @@ async def generate_and_email_license(
             license_key, 
             request.username
         )
+        
+        # Handle either boolean or dictionary return
+        email_success = False
+        email_message = ""
+        
+        if isinstance(email_result, bool):
+            # Handle boolean return
+            email_success = email_result
+            email_message = "Email sending failed" if not email_success else "Email sent successfully"
+        elif isinstance(email_result, dict):
+            # Handle dictionary return
+            email_success = email_result.get("success", False)
+            email_message = email_result.get("message", "")
+        
         sent_results.append({
             "license_key": license_key,
-            "email_sent": email_result["success"],
-            "message": email_result["message"]
+            "email_sent": email_success,
+            "message": email_message
         })
     
     # Check if any emails failed

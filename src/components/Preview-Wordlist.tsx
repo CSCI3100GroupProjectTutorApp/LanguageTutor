@@ -1,39 +1,83 @@
-import { StyleSheet, Text, View, Pressable } from 'react-native'
-import { Word } from '../../assets/types/Word'
-import {Link} from 'expo-router'
+// components/Preview-Wordlist.tsx
 
-export const PreviewWordlist = ({ word }:{word : Word}) => {
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native'
+import React from 'react'
+import { useRouter } from 'expo-router';
+import { Word } from '../../assets/types/Word'
+
+const PreviewWordlist = (wordText: Word) => {
+  
+  const name = wordText.word
+  const router = useRouter()
+
   return (
-    <Link asChild href={`/word/${word.name}`}>
-        <Pressable style={styles.item}>
-            <View style={styles.itemTextContainer}>
-                <Text style={styles.itemTitle}>{word.name}</Text>
-                <Text>{word.definition[word.partOfSpeech[0]].join("，")}</Text>
-            </View>
-        </Pressable>
-    </Link>
+    <TouchableOpacity 
+      style={styles.container}
+      onPress={() => router.push(`/word/${name}`)}
+    >
+      <View style={styles.wordContainer}>
+        <Text style={styles.wordText}>{wordText.word}</Text>
+      </View>
+      
+      {wordText.part_of_speech && wordText.part_of_speech.length > 0 && (
+        <View style={styles.definitionContainer}>
+         <Text style={styles.partOfSpeech}>{wordText.part_of_speech.join(" ")}</Text>
+        </View>
+      )} 
+      
+      {wordText.ch_meaning.length > 0 && (
+        <View style={styles.chineseContainer}>
+          <Text style={styles.chineseText}>{wordText.ch_meaning.join("，")}</Text>
+        </View>
+      )}
+    
+    </TouchableOpacity>
   )
 }
 
 export default PreviewWordlist
 
 const styles = StyleSheet.create({
-    item: {
-        width: '99%',
-        backgroundColor: 'white',
-        marginVertical: 8,
-        borderRadius: 10,
-        borderColor:"black",
-        borderWidth:1,
-        overflow: 'hidden',
-      },
-      itemTextContainer: {
-        padding: 8,
-        alignItems: 'flex-start',
-        gap: 4,
-      },
-      itemTitle: {
-        fontSize: 16,
-        color: 'black',
-      },
+  container: {
+    backgroundColor: '#fff',
+    marginVertical: 6,
+    borderRadius: 10,
+    padding: 16,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+  wordContainer: {
+    marginBottom: 8,
+  },
+  wordText: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#333',
+  },
+  definitionContainer: {
+    marginBottom: 5
+  },
+  definitionText: {
+    fontSize: 16,
+    color: 'black',
+    marginBottom: 4,
+    fontWeight: '400',
+  },
+  partOfSpeech: {
+    fontSize: 14,
+    fontStyle: 'italic',
+    fontWeight: '500',
+    color: '#888',
+  },
+  chineseContainer: {
+    marginTop: 2,
+  },
+  chineseText: {
+    fontSize: 18,
+    color: '#333',
+    fontWeight: '500',
+  },
 })
