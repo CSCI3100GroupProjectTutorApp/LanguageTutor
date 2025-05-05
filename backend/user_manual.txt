@@ -1,0 +1,132 @@
+Language Tutoring Application User Manual
+Welcome to the Language Tutoring Application! This manual will guide you through the features available in this release.
+
+1. Getting Started
+1.1 Account Creation
+To start using the application, you need to create an account:
+
+Open the Language Tutoring Application.
+
+Navigate to the Sign Up or Register screen.
+
+Enter a unique Username, your Email Address, and a secure Password.
+
+Tap the Register or Sign Up button.
+
+If registration is successful, you will be directed to the login screen or automatically logged in.
+
+1.2 Logging In
+If you already have an account, you can log in:
+
+Open the Language Tutoring Application.
+
+Navigate to the Login or Sign In screen.
+
+Enter your Username or Email Address and your Password.
+
+Tap the Login or Sign In button.
+
+If login is successful, you will access the main application features.
+
+2. Managing Your Vocabulary
+The core of the application is your personalized vocabulary list.
+
+2.1 Adding New Words
+You can add words manually or using the OCR feature.
+
+2.1.1 Adding Words Manually
+Go to the Vocabulary section.
+
+Tap the Add Word button (usually a "+" icon).
+
+Enter the Word itself.
+
+Provide the English Meaning and Chinese Meaning (or meanings in other languages if supported).
+
+Select or enter the Part(s) of Speech.
+
+Add any relevant Context or notes.
+
+Tap Save. The word will be added to your list.
+
+2.1.2 Adding Words via OCR
+Go to the OCR or Scan Text feature.
+
+You may be prompted to allow camera access or select an image from your gallery.
+
+Point your camera at the text you want to extract or select an image.
+
+The application will process the image and display the extracted text.
+
+You can then select specific words or phrases from the extracted text.
+
+For each selected word, you will be guided to add it to your vocabulary, similar to adding manually (Section 2.1.1), with the extracted text pre-filled.
+
+2.2 Viewing Your Words
+Go to the Vocabulary section to see a list of all your saved words.
+
+Tap on a word in the list to view its full details (meanings, part of speech, context).
+
+2.3 Updating Words
+Go to the Vocabulary section and tap on the word you want to update.
+
+Tap the Edit button (usually a pencil icon).
+
+Modify the word's details as needed.
+
+Tap Save to apply the changes.
+
+2.4 Deleting Words
+Go to the Vocabulary section.
+
+You can usually swipe left on a word in the list or tap on the word and find a Delete button.
+
+Confirm the deletion when prompted. The word will be removed from your list.
+
+2.5 Searching Your Words
+Use the Search bar in the Vocabulary section to find words by text, meaning, or other details.
+
+3. Offline Access and Synchronization
+The application allows you to work offline.
+
+If you lose your internet connection, you can continue to add, edit, and delete words.
+
+These changes will be stored locally on your device.
+
+Once your internet connection is restored, the application will automatically synchronize your local changes with your cloud account.
+
+Ensure you are logged in to enable synchronization.
+
+4. License and Premium Features
+Some features may require a valid license.
+
+4.1 Requesting a License
+Navigate to the Account or Settings section.
+
+Look for an option related to License or Premium.
+
+Follow the steps to Request a License Key. This might involve a simple request or a process outside the app (e.g., visiting a website).
+
+Once you have a license key, proceed to activation.
+
+4.2 Activating a License
+In the Account or Settings section, find the Activate License option.
+
+Enter the License Key you received.
+
+Tap the Activate button.
+
+The application will verify the key. If successful, your account will gain access to premium features.
+
+4.3 Checking License Status
+In the Account or Settings section, you can typically view your License Status to see if you have a valid license and its details (e.g., expiry date).
+
+4.4 Accessing Protected Data
+Features or content marked as "Premium" or requiring a license will become accessible after you have successfully activated a valid license.
+
+5. Future Features (Planned)
+Look forward to these features in upcoming releases:
+
+Translation Support: Get instant translations for words.
+
+Learning Progress Tracking: Monitor your learning journey, see words mastered, and track your performance in exercises or quizzes.

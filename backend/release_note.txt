@@ -1,0 +1,49 @@
+Language Tutoring Application Release Notes
+Version 1.0.0 - Initial Release
+We are excited to announce the initial release of the Language Tutoring Application! This version provides a foundation for interactive language learning, focusing on vocabulary building, practical tools like OCR, and flexible usage with offline capabilities and a licensing model.
+
+Key Features:
+
+User Accounts: Easily register and log in to personalize your learning experience.
+
+Personalized Vocabulary: Add, view, edit, and delete your own vocabulary words with detailed information (meanings, parts of speech, context). Search through your saved words to quickly find what you need.
+
+OCR Text Extraction: Use your device's camera or upload images to quickly extract text and add new words to your vocabulary list.
+
+Offline Access & Synchronization: Continue adding and managing vocabulary even without an internet connection. Your data will automatically synchronize with the cloud database once you're back online.
+
+License Management: Access premium features through a licensing system. Request and activate a license to unlock additional capabilities (e.g., protected data/content).
+
+Core Backend APIs: A robust backend supporting all application features, including secure authentication, data storage (MongoDB), and integration with external services (mocked in testing for Youdao, Google Cloud Vision).
+
+Improvements and Bug Fixes in this Release:
+
+Implemented secure user registration and login flows.
+
+Ensured reliable token-based authentication for accessing protected user data.
+
+Developed comprehensive API endpoints for vocabulary management (CRUD, search, retrieval).
+
+Integrated OCR functionality for text extraction from images.
+
+Established a basic offline storage mechanism (simulated with SQLite in testing) and backend synchronization logic.
+
+Introduced a foundational license request and activation system.
+
+Addressed various backend bugs related to data handling, error responses, and authentication/authorization logic identified during testing.
+
+Improved input validation across key backend endpoints to enhance security and data integrity.
+
+Known Issues:
+
+Complex data conflict resolution scenarios during offline synchronization may not be fully automated and might require manual intervention in some cases.
+
+Performance under very high concurrent user load has not been extensively tested or optimized yet.
+
+Comprehensive security testing against advanced attack vectors is ongoing.
+
+The mocked external API calls in the test suite mean that the actual integration with live Youdao or Google Cloud Vision services needs separate verification in a staging/production environment.
+
+Specific UI/UX aspects related to new features will be refined in future frontend updates.
+
+We are committed to continuously improving the Language Tutoring Application. Stay tuned for future updates that will include features like translation support, learning progress tracking, and more!
