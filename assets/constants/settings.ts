@@ -12,27 +12,10 @@ export const SETTINGDATA : Setting[] = [
           href: "../settings/profile", 
         },
         {
-          title: "Licence",
+          title: "License",
           description:"",
           icon: "key",
           href: "../settings/license",
-        },
-      ],
-    },
-    {
-      section: "Help",
-      items: [
-        {
-          title: "FQA",
-          description: "",
-          icon: "help-circle-outline",
-          href: "../settings/FQA",
-        },
-        {
-          title: "About",
-          description: "",
-          icon: "information-circle-outline",
-          href: "../settings/about",
         },
       ],
     },
