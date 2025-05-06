@@ -145,14 +145,6 @@ const Home = () => {
     }
   };
 
-  // Legacy load words function - now calls the session-aware version
-  const loadWords = () => {
-    if (!userid) return;
-    
-    const sessionId = `manual-${Date.now()}`;
-    loadingSessionRef.current = sessionId;
-    loadWordsWithSession(sessionId);
-  };
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
