@@ -124,7 +124,13 @@ export const translateWordCreate = async (word: string): Promise<WordCreate> => 
     };
     return wordCreate;
   } catch (error) {
-    console.error('Error in translateWordCreate:', error);
-    throw error;
+    const wordCreate: WordCreate = {
+      word: word,
+      en_meaning: {},
+      ch_meaning: [],
+      part_of_speech: [],
+      translated: 0,
+    };
+    return wordCreate;
   }
 };
