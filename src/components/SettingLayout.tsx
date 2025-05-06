@@ -3,7 +3,6 @@ import { Setting } from '../../assets/types/Setting'
 import { Ionicons } from "@expo/vector-icons"; 
 import { Link, useRouter } from 'expo-router';
 import { clearAuthToken } from '../services/authService';
-import { logout } from '../api/auth';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export const SettingLayout = ({ settings }:{settings : Setting}) => {
@@ -132,13 +131,13 @@ export default SettingLayout
 
 const styles = StyleSheet.create({
     section: {
-        marginBottom: 24,
+        marginBottom: 12,
     },
     sectionTitle: {
         fontSize: 30,
         fontWeight: "bold",
         color: "black", // Section title color
-        marginBottom: 8,
+        marginBottom: 24,
     },
     item: {
         flexDirection: "row",
@@ -146,7 +145,7 @@ const styles = StyleSheet.create({
         backgroundColor: "white", // Item background
         padding: 12,
         borderRadius: 8,
-        marginBottom: 8,
+        marginBottom: 20,
         borderColor:"black",
         borderWidth:1,
     },
