@@ -1,7 +1,7 @@
 
 import {View, StyleSheet, Text, StatusBar, TouchableOpacity,Platform, ActivityIndicator, Alert, Linking, ScrollView, Pressable} from 'react-native';
 import {SafeAreaView, SafeAreaProvider} from 'react-native-safe-area-context';
-import React, {useState, useEffect} from 'react';
+import React, {useState, useEffect, useCallback} from 'react';
 import { AntDesign, Ionicons } from "@expo/vector-icons";
 import * as DocumentPicker from 'expo-document-picker';
 import * as ImagePicker from "expo-image-picker";
@@ -9,30 +9,47 @@ import * as FileSystem from 'expo-file-system';
 import { getAuthToken } from '../../services/authService'
 import mammoth from "mammoth";
 import NetInfo from '@react-native-community/netinfo';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect} from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-
 
 const upload = () => {
   
+  const API_BASE_URL = 'http://192.168.0.118:8000';
   const [selectFile, setSelectFile] = useState<DocumentPicker.DocumentPickerAsset| null>(null)
   const [photo, setPhoto] = useState<ImagePicker.ImagePickerAsset| null>(null)
   const [errorMessage, setErrorMessage] = useState(""); 
   const [isLoading, setIsLoading] = useState(false);
   const [extractedText, setExtractedText] = useState("")
   const [navigationReady, setNavigationReady] = useState(false);
-  const [isConnected, setIsConnected] = useState(true);
+  const [licenseStatus, setLicenseStatus] = useState(false);
   const router = useRouter ()
 
-  useEffect(() => {
-    const unsubscribe = NetInfo.addEventListener(state => {
-      setIsConnected(!!state.isConnected && !!state.isInternetReachable);
-    });
-  
-    return () => unsubscribe();
-  }, []);
+  useFocusEffect(
+    useCallback(() => {
+    const timer = setTimeout(() => {
+      setNavigationReady(true);
+    }, 500);
+    fetchLicenseStatus();
+    return () => {
+      clearTimeout(timer)
+      setPhoto(null)
+      setSelectFile(null)
+    }
+  }, [])
+  )
   
 
+  
+  // Fetch the current user's license status
+  const fetchLicenseStatus = async () => {
+    setErrorMessage("");    
+    try {
+      const license = await AsyncStorage.getItem("license");
+      setLicenseStatus(license === 'true');
+    } catch (error: any) {
+      setErrorMessage(error.message || 'Failed to get license status. Try again later');
+    } 
+  };
 
   const safeNavigate = () => {
     if (navigationReady) {
@@ -51,14 +68,7 @@ const upload = () => {
     }
   };
 
-  useEffect(() => {
-    // Set navigation as ready after component mounts
-    const timer = setTimeout(() => {
-      setNavigationReady(true);
-    }, 500);
-    
-    return () => clearTimeout(timer);
-  }, []);
+
 
   const handleSelectFile = async () => {
     setErrorMessage("")
@@ -88,7 +98,7 @@ const upload = () => {
         Alert.alert("No file selected","Select a File to Upload");
       }
     } catch (err:any) {
-      setErrorMessage("Error: Something went wrong");
+      setErrorMessage("Error: Selecting File");
     }
   }
 
@@ -119,7 +129,7 @@ const upload = () => {
       }
     }
     catch (err: any){
-      setErrorMessage("Error: Something went wrong")  
+      setErrorMessage("Error: Opening Camera")  
     }
       
   }
@@ -147,8 +157,23 @@ const upload = () => {
   const handleUpload = async() => {
     setErrorMessage("")
     setIsLoading(true)
-    if (!isConnected) {
-      setErrorMessage("No internet connection. Please check your network and try again.");
+    const netInfo = await NetInfo.fetch();
+    if (!netInfo.isConnected) {
+      setErrorMessage("No internet connection available. Please check your network.");
+      setIsLoading(false);
+      return;
+    }
+    if (!licenseStatus) {
+      Alert.alert(
+        "Permission Denied",
+        "Sorry! This feature is only available to users with a valid license",
+        [{ text: "Cancel", style: "cancel" },
+        { 
+          text: "Activate License",
+          onPress: () => router.push('../settings/license')
+        }]
+      );
+      setIsLoading(false)
       return;
     }
     try{
@@ -253,7 +278,7 @@ const upload = () => {
     }
     catch (err :any){
       console.error("Error uploading file:", err);
-      setErrorMessage("Error: Something went wrong") 
+      setErrorMessage("Error: uploading file") 
     }
     finally{
       setIsLoading(false)
@@ -265,13 +290,7 @@ const upload = () => {
     if (!token) {
         throw new Error('Not authenticated');
     }
-    const netInfo = await NetInfo.fetch();
-    if (!netInfo.isConnected) {
-      setErrorMessage("No internet connection available. Please check your network.");
-      setIsLoading(false);
-      return;
-    }
-    const response = await fetch('http://192.168.0.118:8000/extract-text', {
+    const response = await fetch(`${API_BASE_URL}/extract-text`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -318,22 +337,12 @@ const upload = () => {
     }
   };
 
-  const base64ToUint8Array = (base64 : any) => {
-    const binaryString = atob(base64);
-    const len = binaryString.length;
-    const bytes = new Uint8Array(len);
-    for (let i = 0; i < len; i++) {
-      bytes[i] = binaryString.charCodeAt(i);
-    }
-    return bytes;
-  }
-
   return (
   <SafeAreaProvider>
     <SafeAreaView style={styles.container}>
     <View style={{alignItems:'center', marginBottom:24}}>
       <Text style={styles.header}> Upload for Instant Translation</Text>
-      <Text style={styles.descriptor}>Support file: pdf, doc, docx, images</Text>  
+      <Text style={styles.descriptor}>Support file: pdf, text, doc, docx, images</Text>  
     </View>
     <TouchableOpacity style={styles.uploadBox} onPress={handleSelectFile}>
         <AntDesign name="addfile" size={40} color="black" />
