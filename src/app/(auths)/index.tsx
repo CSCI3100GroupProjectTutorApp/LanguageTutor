@@ -4,9 +4,9 @@ import React, { useState, useContext } from 'react'
 import { Link, useRouter, useNavigation } from 'expo-router'
 import { AntDesign, Ionicons } from '@expo/vector-icons'
 import { login } from '../../api/auth'
-import * as wordService from '../../services/wordService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getUserID } from '../../services/authService'
+import { getLicenseStatus} from '../../services/licenseService';
 
 const Login = () => {
     const [username, setUsername] = useState("");
@@ -31,9 +31,10 @@ const Login = () => {
         const response = await login({ username, password });
         console.log("Login successful:", response);
         await AsyncStorage.setItem('userLoggedIn', 'true');
-        const data = await getUserID()
-        await AsyncStorage.setItem('userid', data)
-        const ID = await AsyncStorage.getItem('userid')
+        const ID = await getUserID()
+        await AsyncStorage.setItem('userid', ID)
+        const status = await getLicenseStatus();
+        await AsyncStorage.setItem('license', status.has_valid_license === true? 'true' : 'false')
         console.log(`User ID login: ${ID}`)
         router.replace({
           pathname: '../(tabs)',
@@ -134,33 +135,7 @@ const Login = () => {
               <Text style={styles.buttonText}>Log in</Text>    
             )}
           </TouchableOpacity>
-          <Text style={styles.orText}>------------------- Or sign in with -------------------</Text>
-          <View style={styles.socialContainer}>
-            <TouchableOpacity style={styles.socialButton}>
-              <Image
-                source={{
-                  uri: "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c1/Google_%22G%22_logo.svg/1280px-Google_%22G%22_logo.svg.png",
-                }}
-                style={styles.socialIcon}
-              />
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.socialButton}>
-              <Image
-                source={{
-                  uri: "https://upload.wikimedia.org/wikipedia/commons/0/05/Facebook_Logo_%282019%29.png",
-                }}
-                style={styles.socialIcon}
-              />
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.socialButton}>
-              <Image
-                source={{
-                  uri: "https://upload.wikimedia.org/wikipedia/commons/thumb/c/ce/X_logo_2023.svg/1920px-X_logo_2023.svg.png",
-                }}
-                style={styles.socialIcon}
-              />
-            </TouchableOpacity>
-          </View>
+          
 
           <View style={{justifyContent:'center',flexDirection:"row"}}>     
             <Text style={styles.footerText}>Don't have an account?</Text>
