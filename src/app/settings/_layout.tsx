@@ -8,10 +8,6 @@ const settingsLayout = () => {
             options={{headerShown:false}}/>
             <Stack.Screen name='license' 
             options={{headerShown:false}}/>
-            <Stack.Screen name='FQA' 
-            options={{headerShown:false}}/>
-            <Stack.Screen name='about' 
-            options={{headerShown:false}}/>
         </Stack>
   )
 }
