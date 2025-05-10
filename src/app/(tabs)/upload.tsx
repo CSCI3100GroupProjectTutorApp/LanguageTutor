@@ -11,10 +11,10 @@ import mammoth from "mammoth";
 import NetInfo from '@react-native-community/netinfo';
 import { useRouter, useFocusEffect} from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { API_BASE_URL } from '../../../assets/constants/API_URL';
 
 const upload = () => {
   
-  const API_BASE_URL = 'http://192.168.0.118:8000';
   const [selectFile, setSelectFile] = useState<DocumentPicker.DocumentPickerAsset| null>(null)
   const [photo, setPhoto] = useState<ImagePicker.ImagePickerAsset| null>(null)
   const [errorMessage, setErrorMessage] = useState(""); 

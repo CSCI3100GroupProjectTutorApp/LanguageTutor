@@ -262,8 +262,12 @@ const Home = () => {
       // Reset form and reload words
       hide();
       loadWords(); // Use manual load here
-      
-      Alert.alert("Success", `Added word "${newWord}" successfully!`);
+      if (wordCreate.translated == 0){
+        Alert.alert("Success", `Added word "${newWord}" successfully without translation!`);
+      }
+      else{
+        Alert.alert("Success", `Added word "${newWord}" successfully with translation!`);
+      }
     } catch (error) {
       console.error("Failed to add word:", error);
       Alert.alert("Error", "Failed to add the word to database.");

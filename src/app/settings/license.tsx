@@ -14,6 +14,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { getLicenseStatus, activateLicense, requestLicense, LicenseStatus } from '../../services/licenseService';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const LicencePage = () => {
   // State for license key input
@@ -77,7 +78,7 @@ const LicencePage = () => {
       
       // Refresh license status
       await fetchLicenseStatus();
-      
+      await AsyncStorage.setItem('license','true')
       // Clear input field
       setLicenseKey('');
     } catch (error: any) {
@@ -96,14 +97,7 @@ const LicencePage = () => {
       const result = await requestLicense();
       
       if (result.success) {
-        if (result.license_key) {
-          // If we get a license key directly, show it to the user
-          Alert.alert('License Key', `Your license key is: ${result.license_key}\n\nPlease save this key in a secure location.`);
-        } else {
-          // If the key was sent via email
-          Alert.alert('Success', result.message || 'License key has been sent to your email.');
-        }
-        
+        Alert.alert('Success', result.message || 'License key has been sent to your email.');
         // Refresh license status
         await fetchLicenseStatus();
       } else {

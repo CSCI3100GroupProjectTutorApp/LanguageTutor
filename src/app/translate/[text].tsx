@@ -8,6 +8,7 @@ import { Word, WordCreate } from '../../../assets/types/Word'
 import * as wordService from '../../services/wordService';
 import * as translateService from '../../services/translateService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { API_BASE_URL } from '../../../assets/constants/API_URL';
 
 const text = () => {
   const params  =  useLocalSearchParams()
@@ -76,7 +77,7 @@ const text = () => {
       if (!accesstoken) {
         throw new Error('Not authenticated');
       }
-      const response = await fetch('http://192.168.0.118:8000/translate/word', {
+      const response = await fetch(`${API_BASE_URL}/translate/word`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${accesstoken}`,

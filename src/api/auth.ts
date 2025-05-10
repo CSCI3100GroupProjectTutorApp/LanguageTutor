@@ -3,7 +3,8 @@
  */
 import { apiClient, setAuthToken, clearAuthToken, APIError } from './client';
 import { API_ENDPOINTS } from './config';
-import { setAuthToken as setAuthTokenService } from '../services/authService';
+import { API_BASE_URL } from '../../assets/constants/API_URL';
+import { setAuthToken as setAuthTokenService, setRefreshToken} from '../services/authService';
 
 // Types
 export interface LoginCredentials {
@@ -28,18 +29,19 @@ export interface AuthResponse {
     name: string;
   };
 }
-
 interface LoginResponse {
   access_token: string;
   token_type: string;
+  refresh_token: string;
 }
+
 
 /**
  * Login user with username and password
  */
 export const login = async ({ username, password }: { username: string; password: string }) => {
   try {
-    const response = await fetch('http://localhost:8000/login', {
+    const response = await fetch(`${API_BASE_URL}/login`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
@@ -57,9 +59,9 @@ export const login = async ({ username, password }: { username: string; password
     const data: LoginResponse = await response.json();
     // Store the token in authService
     setAuthTokenService(data.access_token);
+    //setRefreshToken(data.refresh_token)
     return data;
   } catch (error) {
-    console.error('Login error:', error);
     throw error;
   }
 };
@@ -84,7 +86,6 @@ export const register = async (userData: RegisterData): Promise<{ message: strin
     
     return { message: "Registration successful! Please log in." };
   } catch (error) {
-    console.error('Registration failed:', error);
     throw error;
   }
 };
@@ -102,7 +103,6 @@ export const logout = async (): Promise<void> => {
       localStorage.removeItem('refresh_token');
     }
   } catch (error) {
-    console.error('Logout failed:', error);
     throw error;
   }
 };
@@ -138,7 +138,6 @@ export const refreshToken = async (): Promise<{ access_token: string }> => {
     
     return response;
   } catch (error) {
-    console.error('Token refresh failed:', error);
     throw error;
   }
 };

@@ -2,7 +2,9 @@
  * API client for the language tutoring application
  * Handles API requests to the backend
  */
-import { API_BASE_URL, DEFAULT_HEADERS, REQUEST_TIMEOUT } from './config';
+import { DEFAULT_HEADERS, REQUEST_TIMEOUT } from './config';
+import { API_BASE_URL } from '../../assets/constants/API_URL';
+import axios, { AxiosRequestConfig, AxiosResponse, AxiosError } from 'axios';
 
 export class APIError extends Error {
   constructor(
@@ -15,9 +17,47 @@ export class APIError extends Error {
   }
 }
 
+const axiosInstance = axios.create({
+  baseURL: API_BASE_URL,
+  timeout: 10000,
+  headers: {
+    'Content-Type': 'application/json',
+  },
+});
+
 // Token management
 let accessToken: string | null = null;
+let authToken: string | null = null;
 
+axiosInstance.interceptors.request.use(
+  (config) => {
+    if (authToken) {
+      config.headers['Authorization'] = `Bearer ${authToken}`;
+    }
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
+
+// Response interceptor to handle errors
+axiosInstance.interceptors.response.use(
+  (response) => response.data,
+  (error: AxiosError) => {
+    // Create a more friendly error
+    const message = error.response?.data?.detail || 
+                   error.response?.data?.message || 
+                   error.message || 
+                   'Unknown error occurred';
+                   
+    const status = error.response?.status || 500;
+    const data = error.response?.data || {};
+    
+    // Log the error for debugging
+    console.error(`API Error (${status}):`, message, data);
+    
+    throw new APIError(message, status, data);
+  }
+);
 /**
  * Sets the authentication token for API requests
  */
