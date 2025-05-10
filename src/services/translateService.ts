@@ -1,7 +1,6 @@
 import { Word, WordCreate, WordUpdate } from '../../assets/types/Word';
 import { getAuthToken } from '../services/authService'
-
-const API_BASE_URL = 'http://192.168.0.118:8000';
+import { API_BASE_URL } from '../../assets/constants/API_URL';
 
 // Interface for the translation API response
 interface TranslationResponse {
@@ -131,6 +130,6 @@ export const translateWordCreate = async (word: string): Promise<WordCreate> => 
       part_of_speech: [],
       translated: 0,
     };
-    return wordCreate;
+    return wordCreate;  
   }
 };

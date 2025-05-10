@@ -1,5 +1,5 @@
 import { getAuthToken } from './authService';
-
+import { API_BASE_URL } from '../../assets/constants/API_URL';
 // License Types
 export interface LicenseStatus {
   has_valid_license: boolean;
@@ -15,7 +15,7 @@ export const getLicenseStatus = async (): Promise<LicenseStatus> => {
     throw new Error('Not authenticated');
   }
 
-  const response = await fetch('http://localhost:8000/users/license-status', {
+  const response = await fetch(`${API_BASE_URL}/users/license-status`, {
     method: 'GET',
     headers: {
       'Authorization': `Bearer ${token}`,
@@ -37,7 +37,7 @@ export const activateLicense = async (licenseKey: string): Promise<{ message: st
     throw new Error('Not authenticated');
   }
 
-  const response = await fetch('http://localhost:8000/users/activate-license', {
+  const response = await fetch(`${API_BASE_URL}/users/activate-license`, {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${token}`,
@@ -61,7 +61,7 @@ export const requestLicense = async (): Promise<{ success: boolean, license_key?
     throw new Error('Not authenticated');
   }
 
-  const response = await fetch('http://localhost:8000/users/request-license', {
+  const response = await fetch(`${API_BASE_URL}/users/request-license`, {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${token}`,

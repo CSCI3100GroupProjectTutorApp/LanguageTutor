@@ -1,5 +1,5 @@
 import {Info} from '../../assets/types/UserInfo'
-
+import { API_BASE_URL } from '../../assets/constants/API_URL';
 
 // Authentication types
 interface LoginResponse {
@@ -10,7 +10,6 @@ interface LoginResponse {
   // Token storage
   let authToken: string | null = null;
   let refreshToken: string | null = null;
-  const API_BASE_URL = 'http://192.168.0.118:8000';
   
   // Token management functions
   export const getAuthToken = async (): Promise<string | null> => {

@@ -7,7 +7,7 @@ import * as SQLite from 'expo-sqlite';
 import * as translateService from '../services/translateService';
 import {getAuthToken} from '../services/authService';
 import * as FileSystem from 'expo-file-system';
-
+import { API_BASE_URL } from '../../assets/constants/API_URL';
 // Get the database directory
 
 // Database connection - using the new async API
@@ -39,7 +39,6 @@ export const initDatabase = async (userId: string): Promise<SQLite.SQLiteDatabas
     // Create sync_queue table
     await db.execAsync(`
       CREATE TABLE IF NOT EXISTS sync_queue (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
         operation TEXT NOT NULL,  -- 'add', 'update', 'delete', 'view', 'quiz', etc.
         user_id TEXT NOT NULL,  -- User ID for the operation
         wordid INTEGER,
@@ -49,7 +48,6 @@ export const initDatabase = async (userId: string): Promise<SQLite.SQLiteDatabas
         timestamp TEXT NOT NULL
       );
     `);
-
     return db
   } catch (error) {
     console.error('Error initializing database:', error);
@@ -604,6 +602,3 @@ export const processTranslationQueue = async (userID: string): Promise<boolean> 
   }
 };
 
-
-// Constants
-const API_BASE_URL = 'http://192.168.0.118:8000';
