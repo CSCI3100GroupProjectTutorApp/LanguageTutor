@@ -82,27 +82,4 @@ The application uses a custom MongoDB client that supports both synchronous and 
 
 Under `database/` directory, mongodb_utils is library for updating MongoDB database.
 
-sqlite is the implementation of local sqlite storage where the data can be accessed under the data folder in the root directory.
-
-There are 2 tables in the database.
-1. words: table to store the words offline
-2. sync_queue: a queue storing the operations record with words waiting to be updated to cloud database
-
-To check the content of the data :
-
-```
-cd data
-sqlite3 word_data.db #filename is word_data.db in this example
-
-# Once in the SQLite shell:
-.tables  # Should show 'words' and 'sync_queue' tables
-SELECT * FROM words;
-SELECT * FROM sync_queue;
-.exit
-```
-How to install sqlite:
-
-Refer to this link: https://www.tutorialspoint.com/sqlite/sqlite_installation.htm
-
-or this video (for windows): https://www.youtube.com/watch?v=ZiJb7EIaRCE
-
+sqlite is used for local storage under frontend.
